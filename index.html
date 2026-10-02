@@ -1,1098 +1,822 @@
 <!DOCTYPE html>
-<html lang="th" class="dark">
+<html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Monomer Dashboard - 7 Plastic Types & 3 Polymer Structures</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ai Lab Pro: 3D Material Physics</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        darkBg: '#0f172a',
-                        cardBg: '#1e293b',
-                        accentCyan: '#06b6d4',
-                        accentBlue: '#3b82f6',
-                        accentEmerald: '#10b981'
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif']
-                    }
-                }
-            }
-        }
-    </script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-orange: #ff9900;
+            --neon-red: #ff0055;
+            --bg-dark: #0a0a0c;
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: var(--bg-dark);
+            color: #e2e8f0;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        h1, h2, .digital-font {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(15, 20, 25, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .control-btn {
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+        }
+        
+        .btn-active-metal { border-color: #cbd5e1; background: rgba(203, 213, 225, 0.15); box-shadow: inset 0 0 10px rgba(255,255,255,0.1); }
+        .btn-active-ceramic { border-color: #fdba74; background: rgba(253, 186, 116, 0.15); box-shadow: inset 0 0 10px rgba(253,186,116,0.1); }
+        .btn-active-polymer { border-color: #67e8f9; background: rgba(103, 232, 249, 0.15); box-shadow: inset 0 0 10px rgba(103,232,249,0.1); }
+        
+        .btn-active-elec { border-color: var(--neon-blue); background: rgba(0,243,255,0.15); box-shadow: 0 0 15px rgba(0, 243, 255, 0.3); }
+        .btn-active-hammer { border-color: var(--neon-orange); background: rgba(255,153,0,0.15); box-shadow: 0 0 15px rgba(255, 153, 0, 0.3); }
+        .btn-active-heat { border-color: var(--neon-red); background: rgba(255,0,85,0.15); box-shadow: 0 0 15px rgba(255, 0, 85, 0.3); }
+
+        #canvas-container {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+        }
+
+        .panel-transition {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+        }
+        .collapsed-left {
+            transform: translateX(calc(-100% - 1rem));
+            opacity: 0;
+            pointer-events: none;
+        }
+        .collapsed-right {
+            transform: translateX(calc(100% + 1rem));
+            opacity: 0;
+            pointer-events: none;
+        }
     </style>
 </head>
-<body class="bg-darkBg text-slate-100 min-h-screen flex flex-col overflow-x-hidden">
+<body>
 
-    <header class="bg-cardBg/85 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50 px-4 py-3 flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                <i class="fa-solid fa-atom text-white text-xl animate-spin" style="animation-duration: 12s;"></i>
-            </div>
-            <div>
-                <h1 class="font-bold text-base md:text-lg tracking-wide text-white flex items-center gap-2">
-                    7 Plastic Types Monomer & Polymer 3D <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">PRO</span>
-                </h1>
-                <p class="text-xs text-slate-400">เปรียบเทียบโมโนเมอร์ โพลิเมอร์ 7 เบอร์ และโครงสร้างพื้นฐาน ม.3</p>
-            </div>
-        </div>
-        <div class="flex items-center space-x-2">
-            <button onclick="openTableModal()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 border border-slate-700 transition-all">
-                <i class="fa-solid fa-table text-cyan-400"></i> ตารางสรุป & โครงสร้าง ม.3
-            </button>
-            <button onclick="resetCamera()" class="p-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-all text-sm" title="รีเซ็ตมุมมองกล้อง">
-                <i class="fa-solid fa-video"></i>
-            </button>
-        </div>
-    </header>
+    <div id="canvas-container"></div>
 
-    <main class="flex-1 p-4 md:p-6 max-w-5xl mx-auto w-full flex flex-col gap-6">
+    <!-- UI Overlay Layer -->
+    <div class="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-4 md:p-6 overflow-hidden">
         
-        <!-- 3D Viewport Card -->
-        <div class="bg-cardBg border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col relative overflow-hidden group">
-            <div class="flex items-center justify-between mb-3 z-10 flex-wrap gap-2">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-cube text-cyan-400"></i>
-                    <h2 class="font-semibold text-sm md:text-base text-white" id="currentMonomerTitle">เบอร์ 1: PET หรือ PETE (Polyethylene Terephthalate)</h2>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="triggerPolymerization()" id="polyBtn" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-medium text-xs shadow-lg shadow-emerald-500/20 hover:opacity-90 transition-all flex items-center gap-1.5">
-                        <i class="fa-solid fa-link"></i> สร้างโซ่โพลิเมอร์ (PET Polymer)
-                    </button>
-                    <div class="flex items-center gap-1.5 bg-slate-900/80 px-3 py-1 rounded-full border border-slate-800 text-xs text-slate-300 hidden sm:flex">
-                        <i class="fa-solid fa-arrows-spin text-cyan-400"></i>
-                        <span>หมุนด้วยเมาส์ | ซูม Scroll</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Canvas Container -->
-            <div id="canvas-container" class="w-full h-[380px] md:h-[480px] rounded-xl bg-slate-950/60 relative overflow-hidden cursor-grab active:cursor-grabbing border border-slate-900">
-                <div id="canvasOverlay" class="absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300">
-                    <div class="text-center bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-800 text-xs text-slate-400">
-                        กำลังเรนเดอร์โมเลกุล 3 มิติ...
-                    </div>
-                </div>
-            </div>
-
-            <!-- Description Banner -->
-            <div id="plasticDescBanner" class="mt-3 p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0 text-sm">
-                    <i class="fa-solid fa-circle-info"></i>
-                </div>
+        <!-- Top Bar: Logo & Execute -->
+        <div class="flex justify-between items-center w-full max-w-7xl mx-auto pointer-events-auto">
+            <!-- Logo -->
+            <div class="glass-panel rounded-xl px-4 py-2 flex items-center gap-2">
+                <svg class="w-6 h-6 md:w-7 md:h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                 <div>
-                    <span class="font-bold text-cyan-400">คุณสมบัติและการใช้งาน: </span>
-                    <span id="plasticDescText">ใส เหนียว ทนแรงกระแทก ใช้ทำขวดน้ำดื่ม ขวดน้ำอัดลม</span>
+                    <h1 class="text-sm md:text-base font-bold tracking-wider text-white m-0 leading-none">
+                        AI LAB <span class="font-light text-cyan-400">PRO</span>
+                    </h1>
+                    <span class="digital-font text-cyan-500 text-[7px] md:text-[8px] tracking-widest block mt-0.5">3D PHYSICS</span>
                 </div>
             </div>
 
-            <!-- 3D Controls Bar -->
-            <div class="flex flex-wrap items-center justify-between gap-3 mt-3 pt-3 border-t border-slate-800/80">
-                <div class="flex items-center gap-2">
-                    <button onclick="setAnimSpeed(1)" class="px-3 py-1.5 rounded-lg bg-slate-800 text-xs hover:bg-slate-700 transition-all font-medium">ปกติ</button>
-                    <button onclick="setAnimSpeed(2.5)" class="px-3 py-1.5 rounded-lg bg-slate-800 text-xs hover:bg-slate-700 transition-all font-medium">เร็ว</button>
-                    <button onclick="toggleRotation()" id="pauseRotBtn" class="px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-medium hover:bg-cyan-500/30 transition-all">
-                        <i class="fa-solid fa-pause mr-1"></i> หยุดหมุน
-                    </button>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-xs text-slate-400">รูปแบบแสดงผล:</span>
-                    <select id="renderStyleSelect" onchange="changeRenderStyle(this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-cyan-500">
-                        <option value="ballAndStick">บอลแอนด์สติก (Ball & Stick)</option>
-                        <option value="spaceFilling">ทรงกลมชิด (Space-Filling)</option>
-                        <option value="wireframe">โครงข่ายลวด (Wireframe)</option>
-                    </select>
-                </div>
+            <!-- Feedback Overlay -->
+            <div id="result-overlay" class="px-6 py-2 rounded-full bg-black/80 border border-white/20 text-center opacity-0 transition-opacity duration-500 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.6)]">
+                <span id="result-text" class="text-xs md:text-sm font-bold text-white tracking-wide">Result</span>
             </div>
-        </div>
 
-        <div class="bg-cardBg border border-slate-800 rounded-2xl p-4 shadow-xl">
-            <h3 class="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
-                <i class="fa-solid fa-list-check text-cyan-400"></i> เลือกประเภทพลาสติกทั้ง 7 เบอร์ตามมาตรฐานสากล
-            </h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                
-                <!-- เบอร์ 1 -->
-                <button onclick="switchMonomer('pet')" id="btn-pet" class="monomer-btn p-3.5 rounded-xl bg-cyan-500/20 border border-cyan-500/50 text-left transition-all hover:border-cyan-400 group flex items-center justify-between">
-                    <div>
-                        <div class="text-[10px] text-cyan-400 font-bold mb-0.5">PLASTIC #1</div>
-                        <div class="text-sm font-bold text-cyan-300 group-hover:text-cyan-200">เบอร์ 1: PET / PETE</div>
-                        <div class="text-[11px] text-slate-400 mt-0.5">ขวดน้ำดื่ม ขวดน้ำอัดลม</div>
-                    </div>
-                    <div class="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-400 text-sm">
-                        <i class="fa-solid fa-bottle-water"></i>
-                    </div>
-                </button>
-
-                <!-- เบอร์ 2 -->
-                <button onclick="switchMonomer('hdpe')" id="btn-hdpe" class="monomer-btn p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-left transition-all hover:border-slate-700 group flex items-center justify-between">
-                    <div>
-                        <div class="text-[10px] text-slate-400 font-bold mb-0.5">PLASTIC #2</div>
-                        <div class="text-sm font-bold text-slate-200 group-hover:text-white">เบอร์ 2: HDPE</div>
-                        <div class="text-[11px] text-slate-400 mt-0.5">ขวดนม แชมพู ถังน้ำมัน</div>
-                    </div>
-                    <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-300 text-sm">
-                        <i class="fa-solid fa-jug-detergent"></i>
-                    </div>
-                </button>
-
-                <!-- เบอร์ 3 -->
-                <button onclick="switchMonomer('pvc')" id="btn-pvc" class="monomer-btn p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-left transition-all hover:border-slate-700 group flex items-center justify-between">
-                    <div>
-                        <div class="text-[10px] text-slate-400 font-bold mb-0.5">PLASTIC #3</div>
-                        <div class="text-sm font-bold text-slate-200 group-hover:text-white">เบอร์ 3: PVC</div>
-                        <div class="text-[11px] text-slate-400 mt-0.5">ท่อน้ำปะปา สายยาง</div>
-                    </div>
-                    <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-300 text-sm">
-                        <i class="fa-solid fa-pipe"></i>
-                    </div>
-                </button>
-
-                <!-- เบอร์ 4 -->
-                <button onclick="switchMonomer('ldpe')" id="btn-ldpe" class="monomer-btn p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-left transition-all hover:border-slate-700 group flex items-center justify-between">
-                    <div>
-                        <div class="text-[10px] text-slate-400 font-bold mb-0.5">PLASTIC #4</div>
-                        <div class="text-sm font-bold text-slate-200 group-hover:text-white">เบอร์ 4: LDPE</div>
-                        <div class="text-[11px] text-slate-400 mt-0.5">ถุงเย็น ฟิล์มถนอมอาหาร</div>
-                    </div>
-                    <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-300 text-sm">
-                        <i class="fa-solid fa-bag-shopping"></i>
-                    </div>
-                </button>
-
-                <!-- เบอร์ 5 -->
-                <button onclick="switchMonomer('pp')" id="btn-pp" class="monomer-btn p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-left transition-all hover:border-slate-700 group flex items-center justify-between">
-                    <div>
-                        <div class="text-[10px] text-slate-400 font-bold mb-0.5">PLASTIC #5</div>
-                        <div class="text-sm font-bold text-slate-200 group-hover:text-white">เบอร์ 5: PP</div>
-                        <div class="text-[11px] text-slate-400 mt-0.5">กล่องข้าว ชิ้นส่วนรถยนต์</div>
-                    </div>
-                    <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-300 text-sm">
-                        <i class="fa-solid fa-box-archive"></i>
-                    </div>
-                </button>
-
-                <!-- เบอร์ 6 -->
-                <button onclick="switchMonomer('ps')" id="btn-ps" class="monomer-btn p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-left transition-all hover:border-slate-700 group flex items-center justify-between">
-                    <div>
-                        <div class="text-[10px] text-slate-400 font-bold mb-0.5">PLASTIC #6</div>
-                        <div class="text-sm font-bold text-slate-200 group-hover:text-white">เบอร์ 6: PS</div>
-                        <div class="text-[11px] text-slate-400 mt-0.5">โฟมบรรจุอาหาร ช้อนส้อม</div>
-                    </div>
-                    <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-300 text-sm">
-                        <i class="fa-solid fa-utensils"></i>
-                    </div>
-                </button>
-
-                <!-- เบอร์ 7 -->
-                <button onclick="switchMonomer('other')" id="btn-other" class="monomer-btn p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-left transition-all hover:border-slate-700 group flex items-center justify-between sm:col-span-2 lg:col-span-2">
-                    <div>
-                        <div class="text-[10px] text-slate-400 font-bold mb-0.5">PLASTIC #7</div>
-                        <div class="text-sm font-bold text-slate-200 group-hover:text-white">เบอร์ 7: Other (PC / ABS)</div>
-                        <div class="text-[11px] text-slate-400 mt-0.5">ขวดนมเด็ก หรือถังน้ำดื่มใหญ่</div>
-                    </div>
-                    <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-300 text-sm">
-                        <i class="fa-solid fa-cubes"></i>
-                    </div>
-                </button>
-
-            </div>
-        </div>
-
-    </main>
-
-    <div id="tableModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-        <div class="bg-cardBg border border-slate-700 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between bg-slate-900/50">
-                <h3 class="font-bold text-base text-white flex items-center gap-2">
-                    <i class="fa-solid fa-book-open text-cyan-400"></i> สรุปสำหรับนักเรียน ม.3: โครงสร้างโพลิเมอร์พื้นฐาน 3 แบบ & ตาราง 7 เบอร์
-                </h3>
-                <button onclick="closeTableModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            
-            <div class="p-4 md:p-6 overflow-y-auto flex-1 flex flex-col gap-6">
-                
-                <!-- สรุปสำหรับนักเรียน ม.3: 3 รูปแบบโครงสร้างพื้นฐาน พร้อมปุ่มกดดู 3D -->
-                <div class="bg-slate-900/85 border border-cyan-500/40 rounded-xl p-4 md:p-5 shadow-lg">
-                    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-                        <h4 class="text-xs md:text-sm font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
-                            <i class="fa-solid fa-atom text-cyan-400"></i> สรุปสำหรับนักเรียน ม.3: รูปแบบโครงสร้างโพลิเมอร์พื้นฐาน 3 แบบ (กดปุ่มเพื่อดูโมเดล 3D ในจอหลัก)
-                        </h4>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <!-- แบบเส้น -->
-                        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700/80 flex flex-col justify-between hover:border-cyan-500/50 transition-all">
-                            <div>
-                                <div class="text-xs font-bold text-amber-300 mb-1 flex items-center gap-1.5">
-                                    <i class="fa-solid fa-minus"></i> 1. แบบเส้น (Linear Polymer)
-                                </div>
-                                <p class="text-xs text-slate-300 mb-3"><strong class="text-slate-200">ลักษณะ:</strong> สายโซ่ยาวเรียงต่อกัน ยืดหยุ่นและหลอมเหลวได้ง่ายเมื่อได้รับความร้อน (เช่น HDPE, LDPE, PVC)</p>
-                            </div>
-                            <button onclick="showStructure3D('linear')" class="w-full py-2 px-3 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-semibold flex items-center justify-center gap-2 transition-all">
-                                <i class="fa-solid fa-cube"></i> แสดงโครงสร้าง 3D แบบเส้น
-                            </button>
-                        </div>
-
-                        <!-- แบบกิ่ง -->
-                        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700/80 flex flex-col justify-between hover:border-cyan-500/50 transition-all">
-                            <div>
-                                <div class="text-xs font-bold text-amber-300 mb-1 flex items-center gap-1.5">
-                                    <i class="fa-solid fa-code-branch"></i> 2. แบบกิ่ง (Branched Polymer)
-                                </div>
-                                <p class="text-xs text-slate-300 mb-3"><strong class="text-slate-200">ลักษณะ:</strong> มีสายโซ่ย่อยแตกแขนง 3 กิ่งสลับบนล่าง ความหนาแน่นต่ำ จุดหลอมเหลวต่ำกว่าแบบเส้น (เช่น LDPE)</p>
-                            </div>
-                            <button onclick="showStructure3D('branched')" class="w-full py-2 px-3 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-semibold flex items-center justify-center gap-2 transition-all">
-                                <i class="fa-solid fa-cube"></i> แสดงโครงสร้าง 3D แบบกิ่ง (3 กิ่ง)
-                            </button>
-                        </div>
-
-                        <!-- แบบร่างแห -->
-                        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700/80 flex flex-col justify-between hover:border-cyan-500/50 transition-all">
-                            <div>
-                                <div class="text-xs font-bold text-amber-300 mb-1 flex items-center gap-1.5">
-                                    <i class="fa-solid fa-network-wired"></i> 3. แบบร่างแห (Cross-linked Polymer)
-                                </div>
-                                <p class="text-xs text-slate-300 mb-3"><strong class="text-slate-200">ลักษณะ:</strong> สายโซ่เชื่อมกันเป็นโครงข่าย 3 มิติ แข็งแรงมาก ไม่หลอมเหลวเมื่อโดนความร้อน (เช่น เบกกาไลต์)</p>
-                            </div>
-                            <button onclick="showStructure3D('network')" class="w-full py-2 px-3 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-semibold flex items-center justify-center gap-2 transition-all">
-                                <i class="fa-solid fa-cube"></i> แสดงโครงสร้าง 3D แบบร่างแห
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ตารางสรุป 7 เบอร์ -->
-                <div>
-                    <h4 class="text-xs md:text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
-                        <i class="fa-solid fa-table text-cyan-400"></i> ตารางสรุปข้อมูลพลาสติกทั้ง 7 เบอร์ & มอนอเมอร์
-                    </h4>
-                    <div class="overflow-x-auto rounded-xl border border-slate-800">
-                        <table class="w-full text-left border-collapse text-xs md:text-sm">
-                            <thead>
-                                <tr class="border-b border-slate-700 text-slate-400 bg-slate-900/60">
-                                    <th class="p-3">เบอร์</th>
-                                    <th class="p-3">พลาสติก</th>
-                                    <th class="p-3">มอนอเมอร์</th>
-                                    <th class="p-3">สูตรมอนอเมอร์</th>
-                                    <th class="p-3">สูตรพอลิเมอร์ / หน่วยซ้ำ</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-800 text-slate-200">
-                                <tr class="hover:bg-slate-800/40 transition-all">
-                                    <td class="p-3 font-bold text-cyan-400">1</td>
-                                    <td class="p-3 font-semibold">PET</td>
-                                    <td class="p-3 text-slate-300">Ethylene glycol + Terephthalic acid</td>
-                                    <td class="p-3 font-mono text-xs text-amber-300">C₂H₆O₂ + C₈H₆O₄</td>
-                                    <td class="p-3 font-mono text-xs text-emerald-300">(C₁₀H₈O₄)ₙ</td>
-                                </tr>
-                                <tr class="hover:bg-slate-800/40 transition-all">
-                                    <td class="p-3 font-bold text-cyan-400">2</td>
-                                    <td class="p-3 font-semibold">HDPE</td>
-                                    <td class="p-3 text-slate-300">Ethylene</td>
-                                    <td class="p-3 font-mono text-xs text-amber-300">C₂H₄</td>
-                                    <td class="p-3 font-mono text-xs text-emerald-300">(C₂H₄)ₙ</td>
-                                </tr>
-                                <tr class="hover:bg-slate-800/40 transition-all">
-                                    <td class="p-3 font-bold text-cyan-400">3</td>
-                                    <td class="p-3 font-semibold">PVC</td>
-                                    <td class="p-3 text-slate-300">Vinyl chloride</td>
-                                    <td class="p-3 font-mono text-xs text-amber-300">C₂H₃Cl</td>
-                                    <td class="p-3 font-mono text-xs text-emerald-300">(C₂H₃Cl)ₙ</td>
-                                </tr>
-                                <tr class="hover:bg-slate-800/40 transition-all">
-                                    <td class="p-3 font-bold text-cyan-400">4</td>
-                                    <td class="p-3 font-semibold">LDPE</td>
-                                    <td class="p-3 text-slate-300">Ethylene</td>
-                                    <td class="p-3 font-mono text-xs text-amber-300">C₂H₄</td>
-                                    <td class="p-3 font-mono text-xs text-emerald-300">(C₂H₄)ₙ</td>
-                                </tr>
-                                <tr class="hover:bg-slate-800/40 transition-all">
-                                    <td class="p-3 font-bold text-cyan-400">5</td>
-                                    <td class="p-3 font-semibold">PP</td>
-                                    <td class="p-3 text-slate-300">Propylene</td>
-                                    <td class="p-3 font-mono text-xs text-amber-300">C₃H₆</td>
-                                    <td class="p-3 font-mono text-xs text-emerald-300">(C₃H₆)ₙ</td>
-                                </tr>
-                                <tr class="hover:bg-slate-800/40 transition-all">
-                                    <td class="p-3 font-bold text-cyan-400">6</td>
-                                    <td class="p-3 font-semibold">PS</td>
-                                    <td class="p-3 text-slate-300">Styrene</td>
-                                    <td class="p-3 font-mono text-xs text-amber-300">C₈H₈</td>
-                                    <td class="p-3 font-mono text-xs text-emerald-300">(C₈H₈)ₙ</td>
-                                </tr>
-                                <tr class="hover:bg-slate-800/40 transition-all">
-                                    <td class="p-3 font-bold text-cyan-400">7</td>
-                                    <td class="p-3 font-semibold">PC</td>
-                                    <td class="p-3 text-slate-300">Bisphenol A + สารร่วมปฏิกิริยา</td>
-                                    <td class="p-3 font-mono text-xs text-amber-300">C₁₅H₁₆O₂ + COCl₂</td>
-                                    <td class="p-3 font-mono text-xs text-emerald-300">(C₁₆H₁₄O₃)ₙ</td>
-                                </tr>
-                                <tr class="hover:bg-slate-800/40 transition-all">
-                                    <td class="p-3 font-bold text-cyan-400">7</td>
-                                    <td class="p-3 font-semibold">ABS</td>
-                                    <td class="p-3 text-slate-300">Acrylonitrile + Butadiene + Styrene</td>
-                                    <td class="p-3 font-mono text-xs text-amber-300">C₃H₃N + C₄H₆ + C₈H₈</td>
-                                    <td class="p-3 font-mono text-xs text-emerald-300">โคพอลิเมอร์</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-            </div>
-            
-            <div class="px-6 py-3 border-t border-slate-700 bg-slate-900/50 flex justify-end">
-                <button onclick="closeTableModal()" class="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition-all">
-                    ปิดหน้าต่าง
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
-        <div class="bg-cardBg border border-cyan-500/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400">
-                <i class="fa-solid fa-bell"></i>
-            </div>
+            <!-- Execute Button -->
             <div>
-                <h4 id="toastTitle" class="text-xs font-bold text-cyan-400">การแจ้งเตือนระบบ</h4>
-                <p id="toastMessage" class="text-xs text-slate-300">ข้อความแจ้งเตือนรายละเอียด...</p>
+                <button id="btn-execute" onclick="executeSimulation()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-5 py-2.5 rounded-xl shadow-[0_0_15px_rgba(0,243,255,0.4)] transition-all transform hover:scale-[1.05] active:scale-95 digital-font text-xs tracking-widest disabled:opacity-50 disabled:cursor-not-allowed">
+                    EXECUTE
+                </button>
             </div>
         </div>
+
+        <!-- Middle Area: Left & Right Collapsible Panels -->
+        <div class="flex justify-between items-center w-full max-w-7xl mx-auto my-auto relative">
+            
+            <!-- 1. SELECT MATERIAL PANEL (LEFT) -->
+            <div class="relative flex items-center">
+                <div id="panel-left" class="glass-panel panel-transition rounded-2xl p-3 md:p-4 w-56 md:w-64 flex flex-col gap-2.5 pointer-events-auto">
+                    <div class="flex items-center justify-between border-b border-slate-700/60 pb-2">
+                        <h2 class="text-[10px] md:text-xs uppercase tracking-widest text-slate-300 font-bold">1. Select Material</h2>
+                        <span class="digital-font text-[9px] text-cyan-400">วัสดุ</span>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <button id="btn-mat-metal" onclick="uiSelectMat('metal')" class="control-btn border border-slate-700 bg-slate-800/50 rounded-xl p-2.5 flex items-center justify-between hover:bg-slate-700 btn-active-metal">
+                            <span class="font-semibold text-slate-200 text-xs md:text-sm">Metal (โลหะ)</span>
+                            <span class="text-xs">🔩</span>
+                        </button>
+                        <button id="btn-mat-ceramic" onclick="uiSelectMat('ceramic')" class="control-btn border border-slate-700 bg-slate-800/50 rounded-xl p-2.5 flex items-center justify-between hover:bg-slate-700">
+                            <span class="font-semibold text-slate-200 text-xs md:text-sm">Ceramic (เซรามิก)</span>
+                            <span class="text-xs">🍽️</span>
+                        </button>
+                        <button id="btn-mat-polymer" onclick="uiSelectMat('polymer')" class="control-btn border border-slate-700 bg-slate-800/50 rounded-xl p-2.5 flex items-center justify-between hover:bg-slate-700">
+                            <span class="font-semibold text-slate-200 text-xs md:text-sm">Polymer (พอลิเมอร์)</span>
+                            <span class="text-xs">🥤</span>
+                        </button>
+                    </div>
+                </div>
+                <!-- Toggle Button Left -->
+                <button onclick="togglePanel('left')" class="glass-panel pointer-events-auto w-7 h-12 rounded-r-xl flex items-center justify-center text-cyan-400 hover:bg-slate-800 transition-colors ml-0.5 shadow-md" title="ย่อ/ขยายแผงวัสดุ">
+                    <svg id="icon-toggle-left" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                </button>
+            </div>
+
+            <!-- 2. SELECT TEST PANEL (RIGHT) -->
+            <div class="relative flex items-center flex-row-reverse">
+                <div id="panel-right" class="glass-panel panel-transition rounded-2xl p-3 md:p-4 w-56 md:w-64 flex flex-col gap-2.5 pointer-events-auto">
+                    <div class="flex items-center justify-between border-b border-slate-700/60 pb-2">
+                        <h2 class="text-[10px] md:text-xs uppercase tracking-widest text-slate-300 font-bold">2. Select Test</h2>
+                        <span class="digital-font text-[9px] text-orange-400">การทดสอบ</span>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <button id="btn-test-elec" onclick="uiSelectTest('elec')" class="control-btn border border-slate-700 bg-slate-800/50 rounded-xl p-2.5 flex items-center justify-between hover:bg-slate-700 btn-active-elec">
+                            <span class="font-semibold text-slate-200 text-xs md:text-sm">การนำไฟฟ้า (Conductivity)</span>
+                            <span class="text-xs">⚡</span>
+                        </button>
+                        <button id="btn-test-hammer" onclick="uiSelectTest('hammer')" class="control-btn border border-slate-700 bg-slate-800/50 rounded-xl p-2.5 flex items-center justify-between hover:bg-slate-700">
+                            <span class="font-semibold text-slate-200 text-xs md:text-sm">การกระแทก (Impact)</span>
+                            <span class="text-xs">🔨</span>
+                        </button>
+                        <button id="btn-test-heat" onclick="uiSelectTest('heat')" class="control-btn border border-slate-700 bg-slate-800/50 rounded-xl p-2.5 flex items-center justify-between hover:bg-slate-700">
+                            <span class="font-semibold text-slate-200 text-xs md:text-sm">ความร้อน (Thermal)</span>
+                            <span class="text-xs">🔥</span>
+                        </button>
+                    </div>
+                </div>
+                <!-- Toggle Button Right -->
+                <button onclick="togglePanel('right')" class="glass-panel pointer-events-auto w-7 h-12 rounded-l-xl flex items-center justify-center text-cyan-400 hover:bg-slate-800 transition-colors mr-0.5 shadow-md" title="ย่อ/ขยายแผงทดสอบ">
+                    <svg id="icon-toggle-right" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Bottom Spacer -->
+        <div></div>
     </div>
 
     <script>
-        let scene, camera, renderer, moleculeGroup;
-        let isRotating = true;
-        let animSpeedMultiplier = 1.0;
-        let currentStyle = 'ballAndStick';
-        let currentMonomerKey = 'pet';
-        let isPolymerView = false;
+        // --- GLOBAL STATE ---
+        let currentMat = 'metal';
+        let currentTest = 'elec';
+        let isSimulating = false;
+        let isLeftCollapsed = false;
+        let isRightCollapsed = false;
 
-        const monomersData = {
-            pet: {
-                title: 'เบอร์ 1: PET หรือ PETE (Polyethylene Terephthalate)',
-                polymerName: 'โพลิเอทิลีนเทเรฟทาเลต (Polyethylene Terephthalate)',
-                buttonText: 'สร้างโซ่โพลิเมอร์ (PET Polymer)',
-                desc: 'ใส เหนียว ทนแรงกระแทก ใช้ทำขวดน้ำดื่ม ขวดน้ำอัดลม',
-                atoms: [
-                    { type: 'C', x: -1.2, y: 0, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'C', x: -0.4, y: 0.7, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'C', x: 0.6, y: 0.4, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'C', x: 1.0, y: -0.6, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'C', x: 0.2, y: -1.3, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'C', x: -0.8, y: -1.0, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'O', x: 2.1, y: -0.8, z: 0, color: 0xef4444, size: 0.5 },
-                    { type: 'H', x: -2.0, y: 0.3, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: -0.7, y: 1.7, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: 1.2, y: 1.1, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: 0.5, y: -2.3, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: -1.4, y: -1.7, z: 0, color: 0x10b981, size: 0.35 }
-                ],
-                bonds: [
-                    { from: 0, to: 1 }, { from: 1, to: 2, double: true }, { from: 2, to: 3 },
-                    { from: 3, to: 4, double: true }, { from: 4, to: 5 }, { from: 5, to: 0 },
-                    { from: 3, to: 6, double: true },
-                    { from: 0, to: 7 }, { from: 1, to: 8 }, { from: 2, to: 9 }, { from: 4, to: 10 }, { from: 5, to: 11 }
-                ]
-            },
-            hdpe: {
-                title: 'เบอร์ 2: HDPE (High-Density Polyethylene)',
-                polymerName: 'โพลิเอทิลีนความหนาแน่นสูง (High-Density Polyethylene)',
-                buttonText: 'สร้างโซ่โพลิเมอร์ (HDPE Polymer)',
-                desc: 'ขุ่น ทนทานต่อสารเคมีและความชื้น ใช้ทำขวดนม แชมพู และถังน้ำมัน',
-                atoms: [
-                    { type: 'C', x: -0.6, y: 0, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'C', x: 0.6, y: 0, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'H', x: -0.6, y: 1.1, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: -0.6, y: -1.1, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: 0.6, y: 1.1, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: 0.6, y: -1.1, z: 0, color: 0x10b981, size: 0.35 }
-                ],
-                bonds: [
-                    { from: 0, to: 1 },
-                    { from: 0, to: 2 }, { from: 0, to: 3 },
-                    { from: 1, to: 4 }, { from: 1, to: 5 }
-                ]
-            },
-            pvc: {
-                title: 'เบอร์ 3: PVC (Polyvinyl Chloride)',
-                polymerName: 'โพลิไวนิลคลอไรด์ (Polyvinyl Chloride)',
-                buttonText: 'สร้างโซ่โพลิเมอร์ (PVC Polymer)',
-                desc: 'แข็งแรง ทนทานต่อน้ำและไขมัน ใช้ทำท่อน้ำปะปา สายยาง และกรอบหน้าต่าง',
-                atoms: [
-                    { type: 'C', x: -0.6, y: 0, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'C', x: 0.6, y: 0, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'Cl', x: 0.6, y: 1.3, z: 0, color: 0x22c55e, size: 0.7 },
-                    { type: 'H', x: -0.6, y: 1.1, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: -0.6, y: -1.1, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: 1.5, y: -0.6, z: 0, color: 0x10b981, size: 0.35 }
-                ],
-                bonds: [
-                    { from: 0, to: 1 },
-                    { from: 1, to: 2 },
-                    { from: 0, to: 3 }, { from: 0, to: 4 }, { from: 1, to: 5 }
-                ]
-            },
-            ldpe: {
-                title: 'เบอร์ 4: LDPE (Low-Density Polyethylene)',
-                polymerName: 'โพลิเอทิลีนความหนาแน่นต่ำ (Low-Density Polyethylene)',
-                buttonText: 'สร้างโซ่โพลิเมอร์ (LDPE Polymer)',
-                desc: 'นิ่ม ยืดหยุ่นสูง ใช้ทำถุงเย็น ฟิล์มถนอมอาหาร และถุงหิ้ว',
-                atoms: [
-                    { type: 'C', x: -0.6, y: 0, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'C', x: 0.6, y: 0, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'H', x: -0.6, y: 1.1, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: -0.6, y: -1.1, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: 0.6, y: 1.1, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: 0.6, y: -1.1, z: 0, color: 0x10b981, size: 0.35 }
-                ],
-                bonds: [
-                    { from: 0, to: 1 },
-                    { from: 0, to: 2 }, { from: 0, to: 3 },
-                    { from: 1, to: 4 }, { from: 1, to: 5 }
-                ]
-            },
-            pp: {
-                title: 'เบอร์ 5: PP (Polypropylene)',
-                polymerName: 'โพลิโพรพิลีน (Polypropylene)',
-                buttonText: 'สร้างโซ่โพลิเมอร์ (PP Polymer)',
-                desc: 'ทนความร้อนสูง ปลอดภัยใช้กับอาหารและไมโครเวฟได้ ใช้ทำกล่องข้าวและชิ้นส่วนรถยนต์',
-                atoms: [
-                    { type: 'C', x: -1.0, y: 0, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'C', x: 0.1, y: 0.4, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'C', x: 1.2, y: -0.3, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'H', x: -1.6, y: 0.8, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: -1.3, y: -0.9, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: -0.1, y: 1.4, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: 0.9, y: -1.3, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: 1.8, y: -0.1, z: 0.8, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: 1.8, y: -0.1, z: -0.8, color: 0x10b981, size: 0.35 }
-                ],
-                bonds: [
-                    { from: 0, to: 1 }, { from: 1, to: 2 },
-                    { from: 0, to: 3 }, { from: 0, to: 4 },
-                    { from: 1, to: 5 },
-                    { from: 2, to: 6 }, { from: 2, to: 7 }, { from: 2, to: 8 }
-                ]
-            },
-            ps: {
-                title: 'เบอร์ 6: PS (Polystyrene)',
-                polymerName: 'โพลิสไตรีน (Polystyrene)',
-                buttonText: 'สร้างโซ่โพลิเมอร์ (PS Polymer)',
-                desc: 'ใส เปราะ หรือทำเป็นโฟม ใช้ทำโฟมบรรจุอาหารและช้อนส้อมพลาสติกแบบใช้แล้วทิ้ง',
-                atoms: [
-                    { type: 'C', x: -0.8, y: 0, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'C', x: 0.3, y: 0.4, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'C', x: 1.5, y: -0.2, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'C', x: 2.5, y: 0.3, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'C', x: 2.4, y: 1.6, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'C', x: 1.3, y: 2.1, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'C', x: 0.4, y: 1.6, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'H', x: -1.4, y: 0.8, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: -1.2, y: -0.9, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: 0.3, y: -0.5, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: 3.3, y: -0.1, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: 3.1, y: 2.1, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: 1.2, y: 3.0, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: -0.4, y: 2.0, z: 0, color: 0x10b981, size: 0.35 }
-                ],
-                bonds: [
-                    { from: 0, to: 1 }, { from: 1, to: 2 },
-                    { from: 2, to: 3 }, { from: 3, to: 4 }, { from: 4, to: 5 }, { from: 5, to: 6 }, { from: 6, to: 1 },
-                    { from: 0, to: 7 }, { from: 0, to: 8 }, { from: 1, to: 9 },
-                    { from: 2, to: 10 }, { from: 3, to: 11 }, { from: 4, to: 12 }, { from: 5, to: 13 }
-                ]
-            },
-            other: {
-                title: 'เบอร์ 7: Other (เช่น PC / ABS)',
-                polymerName: 'โพลิคาร์บอเนต / พลาสติกอื่นๆ (Polycarbonate / ABS)',
-                buttonText: 'สร้างโซ่โพลิเมอร์ (Other Polymer)',
-                desc: 'พลาสติกอื่นๆ เช่น PC หรือ ABS ใช้ทำขวดนมเด็กหรือถังน้ำดื่มขนาดใหญ่',
-                atoms: [
-                    { type: 'C', x: -1.0, y: 0, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'C', x: 0, y: 0.5, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'C', x: 1.0, y: -0.2, z: 0, color: 0x1e293b, size: 0.6 },
-                    { type: 'O', x: 0, y: 1.7, z: 0, color: 0xef4444, size: 0.5 },
-                    { type: 'H', x: -1.6, y: 0.7, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: -1.2, y: -1.0, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: 0.9, y: -1.2, z: 0, color: 0x10b981, size: 0.35 },
-                    { type: 'H', x: 1.9, y: 0.3, z: 0, color: 0x10b981, size: 0.35 }
-                ],
-                bonds: [
-                    { from: 0, to: 1 }, { from: 1, to: 2 },
-                    { from: 1, to: 3, double: true },
-                    { from: 0, to: 4 }, { from: 0, to: 5 }, { from: 2, to: 6 }, { from: 2, to: 7 }
-                ]
-            }
-        };
-
-        function init3D() {
-            const container = document.getElementById('canvas-container');
-            
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-            camera.position.set(0, 0, 8);
-
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(container.clientWidth, container.clientHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            container.appendChild(renderer.domElement);
-
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-            scene.add(ambientLight);
-
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-            dirLight.position.set(5, 5, 5);
-            scene.add(dirLight);
-
-            buildMolecules3D(currentMonomerKey);
-
-            let isDragging = false;
-            let previousMousePosition = { x: 0, y: 0 };
-
-            container.addEventListener('mousedown', (e) => {
-                isDragging = true;
-                previousMousePosition = { x: e.clientX, y: e.clientY };
-            });
-
-            window.addEventListener('mousemove', (e) => {
-                if (!isDragging || !moleculeGroup) return;
-                const deltaX = e.clientX - previousMousePosition.x;
-                const deltaY = e.clientY - previousMousePosition.y;
-
-                moleculeGroup.rotation.y += deltaX * 0.01;
-                moleculeGroup.rotation.x += deltaY * 0.01;
-
-                previousMousePosition = { x: e.clientX, y: e.clientY };
-            });
-
-            window.addEventListener('mouseup', () => { isDragging = false; });
-
-            container.addEventListener('touchstart', (e) => {
-                if (e.touches.length === 1) {
-                    isDragging = true;
-                    previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        function togglePanel(side) {
+            if (side === 'left') {
+                isLeftCollapsed = !isLeftCollapsed;
+                const panel = document.getElementById('panel-left');
+                const icon = document.getElementById('icon-toggle-left');
+                if (isLeftCollapsed) {
+                    panel.classList.add('collapsed-left');
+                    icon.style.transform = 'rotate(180deg)';
+                } else {
+                    panel.classList.remove('collapsed-left');
+                    icon.style.transform = 'rotate(0deg)';
                 }
-            });
-
-            window.addEventListener('touchmove', (e) => {
-                if (!isDragging || !moleculeGroup || e.touches.length !== 1) return;
-                const deltaX = e.touches[0].clientX - previousMousePosition.x;
-                const deltaY = e.touches[0].clientY - previousMousePosition.y;
-
-                moleculeGroup.rotation.y += deltaX * 0.01;
-                moleculeGroup.rotation.x += deltaY * 0.01;
-
-                previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-            });
-
-            window.addEventListener('touchend', () => { isDragging = false; });
-            window.addEventListener('resize', onWindowResize);
-
-            setTimeout(() => {
-                const overlay = document.getElementById('canvasOverlay');
-                if (overlay) overlay.style.opacity = '0';
-            }, 500);
-
-            animate();
+            } else if (side === 'right') {
+                isRightCollapsed = !isRightCollapsed;
+                const panel = document.getElementById('panel-right');
+                const icon = document.getElementById('icon-toggle-right');
+                if (isRightCollapsed) {
+                    panel.classList.add('collapsed-right');
+                    icon.style.transform = 'rotate(180deg)';
+                } else {
+                    panel.classList.remove('collapsed-right');
+                    icon.style.transform = 'rotate(0deg)';
+                }
+            }
         }
 
-        function buildMolecules3D(key) {
-            if (moleculeGroup) scene.remove(moleculeGroup);
+        // --- THREE.JS SETUP ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0b111a);
+        scene.fog = new THREE.FogExp2(0x0b111a, 0.02);
 
-            moleculeGroup = new THREE.Group();
-            isPolymerView = false;
-            const data = monomersData[key];
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 6, window.innerWidth < 768 ? 22 : 16);
 
-            data.atoms.forEach((atom) => {
-                let radius = atom.size;
-                if (currentStyle === 'spaceFilling') radius *= 1.4;
-                if (currentStyle === 'wireframe') radius *= 0.6;
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        container.appendChild(renderer.domElement);
 
-                const geometry = new THREE.SphereGeometry(radius, 32, 32);
-                const material = currentStyle === 'wireframe' 
-                    ? new THREE.MeshBasicMaterial({ color: atom.color, wireframe: true })
-                    : new THREE.MeshStandardMaterial({ color: atom.color, roughness: 0.3, metalness: 0.2 });
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enablePan = false;
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2; 
+        controls.minDistance = 5;
+        controls.maxDistance = 25;
+        controls.target.set(0, 1.5, 0);
 
-                const mesh = new THREE.Mesh(geometry, material);
-                mesh.position.set(atom.x, atom.y, atom.z);
-                moleculeGroup.add(mesh);
+        // --- LIGHTING SETUP ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); 
+        scene.add(ambientLight);
+
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x64748b, 0.6);
+        hemiLight.position.set(0, 20, 0);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        dirLight.position.set(2, 15, 8);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.bias = -0.0005;
+        scene.add(dirLight);
+
+        const fillLight = new THREE.PointLight(0x00f3ff, 0.8, 30);
+        fillLight.position.set(-10, 5, -10);
+        scene.add(fillLight);
+
+        // --- ENVIRONMENT ---
+        const floorGeo = new THREE.PlaneGeometry(80, 80);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.15, metalness: 0.4 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 });
+        const backWall = new THREE.Mesh(new THREE.BoxGeometry(80, 40, 2), wallMat);
+        backWall.position.set(0, 20, -20);
+        backWall.receiveShadow = true;
+        scene.add(backWall);
+
+        const leftWall = new THREE.Mesh(new THREE.BoxGeometry(2, 40, 80), wallMat);
+        leftWall.position.set(-25, 20, 0);
+        leftWall.receiveShadow = true;
+        scene.add(leftWall);
+
+        const accentMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
+        const accent1 = new THREE.Mesh(new THREE.BoxGeometry(80, 0.2, 2.1), accentMat);
+        accent1.position.set(0, 12, -20);
+        scene.add(accent1);
+
+        const screenGeo = new THREE.PlaneGeometry(16, 8);
+        const screenMat = new THREE.MeshBasicMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
+        const screen = new THREE.Mesh(screenGeo, screenMat);
+        screen.position.set(0, 10, -18.9);
+        scene.add(screen);
+
+        const frameGeo = new THREE.EdgesGeometry(new THREE.PlaneGeometry(16.2, 8.2));
+        const frameMat = new THREE.LineBasicMaterial({ color: 0x00f3ff, linewidth: 2 });
+        const frame = new THREE.LineSegments(frameGeo, frameMat);
+        frame.position.set(0, 10, -18.9);
+        scene.add(frame);
+
+        const stripeMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+        const stripe = new THREE.Mesh(new THREE.PlaneGeometry(12, 0.2), stripeMat);
+        stripe.rotation.x = -Math.PI/2;
+        stripe.position.set(0, 0.01, 5);
+        scene.add(stripe);
+
+        // --- LAB WORKBENCH ---
+        const tableGroup = new THREE.Group();
+        const topGeo = new THREE.BoxGeometry(10, 0.4, 6);
+        const topMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4, metalness: 0.6 });
+        const tableTop = new THREE.Mesh(topGeo, topMat);
+        tableTop.position.y = 0.4;
+        tableTop.receiveShadow = true;
+        tableTop.castShadow = true;
+        tableGroup.add(tableTop);
+
+        const trimGeo = new THREE.BoxGeometry(10.1, 0.1, 6.1);
+        const trimMat = new THREE.MeshStandardMaterial({ color: 0x00f3ff, emissive: 0x00f3ff, emissiveIntensity: 0.6 });
+        const tableTrim = new THREE.Mesh(trimGeo, trimMat);
+        tableTrim.position.y = 0.4;
+        tableGroup.add(tableTrim);
+
+        const legGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.4);
+        const legMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.9, roughness: 0.2 });
+        [[-4.5, 0.2, -2.5], [4.5, 0.2, -2.5], [-4.5, 0.2, 2.5], [4.5, 0.2, 2.5]].forEach(pos => {
+            const leg = new THREE.Mesh(legGeo, legMat);
+            leg.position.set(pos[0], pos[1], pos[2]);
+            leg.castShadow = true;
+            tableGroup.add(leg);
+        });
+        scene.add(tableGroup);
+
+        // --- MATERIALS GENERATOR ---
+        let currentObject = null;
+        let originalY = 0;
+
+        function createMetal() {
+            const geo = new THREE.CylinderGeometry(1, 1, 2.5, 32);
+            const mat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 1.0, roughness: 0.2 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.y = 0.6 + 1.25; 
+            return mesh;
+        }
+
+        function createCeramic() {
+            const points = [];
+            for (let i = 0; i <= 30; i++) {
+                const t = i / 30;
+                const x = Math.sin(t * Math.PI) * 0.9 + 0.3 - Math.sin(t*Math.PI*2)*0.15;
+                const y = t * 2.8; 
+                points.push(new THREE.Vector2(x, y));
+            }
+            const geo = new THREE.LatheGeometry(points, 64);
+            const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.05, roughness: 0.1, side: THREE.DoubleSide });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.y = 0.6;
+            return mesh;
+        }
+
+        function createPolymer() {
+            const geo = new THREE.TorusGeometry(0.9, 0.4, 32, 64);
+            const mat = new THREE.MeshPhysicalMaterial({ color: 0x0ea5e9, metalness: 0.1, roughness: 0.4, transmission: 0.2, thickness: 0.5, clearcoat: 0.5, clearcoatRoughness: 0.2 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.y = 0.6 + 0.4;
+            mesh.rotation.x = Math.PI / 2;
+            return mesh;
+        }
+
+        let shatterGroup = null;
+        let shatterShards = [];
+
+        function loadMaterial(type) {
+            if (currentObject) {
+                scene.remove(currentObject);
+                if (currentObject.geometry) currentObject.geometry.dispose();
+                if (currentObject.material) currentObject.material.dispose();
+            }
+            if(shatterGroup) {
+                scene.remove(shatterGroup);
+                shatterGroup = null;
+            }
+
+            switch(type) {
+                case 'metal': currentObject = createMetal(); break;
+                case 'ceramic': currentObject = createCeramic(); break;
+                case 'polymer': currentObject = createPolymer(); break;
+            }
+            
+            currentObject.castShadow = true;
+            currentObject.receiveShadow = true;
+            originalY = currentObject.position.y;
+            currentObject.userData.originalScale = currentObject.scale.clone();
+            scene.add(currentObject);
+        }
+
+        // --- LAB TOOLS ---
+        const electrodeGroup = new THREE.Group();
+        electrodeGroup.position.y = 8;
+        
+        const leftEl = new THREE.Group();
+        leftEl.position.set(-3, 0, 0);
+        const rightEl = new THREE.Group();
+        rightEl.position.set(3, 0, 0);
+
+        const handleMatRed = new THREE.MeshStandardMaterial({color: 0xd92626, roughness: 0.4});
+        const handleMatBlack = new THREE.MeshStandardMaterial({color: 0x222222, roughness: 0.4});
+        const metalTipMat = new THREE.MeshStandardMaterial({color: 0xe2e8f0, metalness: 0.9, roughness: 0.2});
+        const rubberWireMat = new THREE.MeshStandardMaterial({color: 0x111111, roughness: 0.8});
+
+        const handleGeo = new THREE.CylinderGeometry(0.12, 0.12, 1.2, 16);
+        const guardGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 16);
+        const tipBaseGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.3, 16);
+        const tipConeGeo = new THREE.ConeGeometry(0.04, 0.4, 16);
+
+        // Left Probe
+        leftEl.add(new THREE.Mesh(handleGeo, handleMatRed));
+        const gL = new THREE.Mesh(guardGeo, handleMatRed); gL.position.y = -0.75; leftEl.add(gL);
+        const tBL = new THREE.Mesh(tipBaseGeo, metalTipMat); tBL.position.y = -0.95; leftEl.add(tBL);
+        const tCL = new THREE.Mesh(tipConeGeo, metalTipMat); tCL.position.y = -1.3; leftEl.add(tCL);
+
+        // Right Probe
+        rightEl.add(new THREE.Mesh(handleGeo, handleMatBlack));
+        const gR = new THREE.Mesh(guardGeo, handleMatBlack); gR.position.y = -0.75; rightEl.add(gR);
+        const tBR = new THREE.Mesh(tipBaseGeo, metalTipMat); tBR.position.y = -0.95; rightEl.add(tBR);
+        const tCR = new THREE.Mesh(tipConeGeo, metalTipMat); tCR.position.y = -1.3; rightEl.add(tCR);
+
+        const pathL = new THREE.CubicBezierCurve3(new THREE.Vector3(0, 0.5, 0), new THREE.Vector3(-1.5, 3, 1), new THREE.Vector3(-0.5, 6, -2), new THREE.Vector3(0, 10, -2));
+        leftEl.add(new THREE.Mesh(new THREE.TubeGeometry(pathL, 32, 0.06, 8, false), rubberWireMat));
+
+        const pathR = new THREE.CubicBezierCurve3(new THREE.Vector3(0, 0.5, 0), new THREE.Vector3(1.5, 3, 1), new THREE.Vector3(0.5, 6, -2), new THREE.Vector3(0, 10, -2));
+        rightEl.add(new THREE.Mesh(new THREE.TubeGeometry(pathR, 32, 0.06, 8, false), rubberWireMat));
+        
+        electrodeGroup.add(leftEl);
+        electrodeGroup.add(rightEl);
+        scene.add(electrodeGroup);
+
+        const arcLines = [];
+        const arcMaterial = new THREE.LineBasicMaterial({ color: 0x00f3ff, linewidth: 3, transparent: true, opacity: 0, blending: THREE.AdditiveBlending });
+        for(let i=0; i<4; i++) {
+            const pos = new Float32Array(5 * 3);
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            const line = new THREE.Line(geo, arcMaterial);
+            arcLines.push(line);
+            electrodeGroup.add(line);
+        }
+
+        const arcLight = new THREE.PointLight(0x00f3ff, 0, 15);
+        arcLight.position.y = -1.5;
+        electrodeGroup.add(arcLight);
+
+        // Hammer
+        const hammerGroup = new THREE.Group();
+        const hammerHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 4), new THREE.MeshStandardMaterial({color: 0x5c2b07, roughness: 0.9}));
+        hammerHandle.position.y = 2;
+        hammerHandle.castShadow = true;
+        const hammerHead = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.0, 1.0), new THREE.MeshStandardMaterial({color: 0x475569, metalness: 0.8, roughness: 0.3}));
+        hammerHead.position.set(-0.2, 4, 0);
+        hammerHead.castShadow = true;
+        hammerGroup.add(hammerHandle);
+        hammerGroup.add(hammerHead);
+        hammerGroup.visible = false;
+        scene.add(hammerGroup);
+
+        // Burner
+        const burnerGroup = new THREE.Group();
+        burnerGroup.position.y = 0.6;
+        burnerGroup.visible = false;
+        const fireLight = new THREE.PointLight(0xff6600, 0, 15);
+        fireLight.position.y = 1.0;
+        burnerGroup.add(fireLight);
+
+        const fireParticleCount = 100;
+        const fireGeo = new THREE.BufferGeometry();
+        const firePos = new Float32Array(fireParticleCount * 3);
+        const fireColors = new Float32Array(fireParticleCount * 3);
+        const fireVel = [];
+        const colorBase = new THREE.Color(0xff4500);
+        const colorTip = new THREE.Color(0xffcc00);
+
+        for(let i=0; i<fireParticleCount; i++) {
+            firePos[i*3] = (Math.random() - 0.5) * 2.0;
+            firePos[i*3+1] = Math.random() * 1.5;
+            firePos[i*3+2] = (Math.random() - 0.5) * 2.0;
+            const mixedColor = colorBase.clone().lerp(colorTip, Math.random());
+            fireColors[i*3] = mixedColor.r; fireColors[i*3+1] = mixedColor.g; fireColors[i*3+2] = mixedColor.b;
+            fireVel.push({ x: (Math.random() - 0.5) * 0.02, y: Math.random() * 0.08 + 0.04, z: (Math.random() - 0.5) * 0.02 });
+        }
+        fireGeo.setAttribute('position', new THREE.BufferAttribute(firePos, 3));
+        fireGeo.setAttribute('color', new THREE.BufferAttribute(fireColors, 3));
+
+        const canvasTex = document.createElement('canvas');
+        canvasTex.width = 32; canvasTex.height = 32;
+        const ctxTex = canvasTex.getContext('2d');
+        const grad = ctxTex.createRadialGradient(16, 16, 0, 16, 16, 16);
+        grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
+        ctxTex.fillStyle = grad; ctxTex.fillRect(0, 0, 32, 32);
+        
+        const fireMat = new THREE.PointsMaterial({ size: 0.5, vertexColors: true, map: new THREE.CanvasTexture(canvasTex), transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
+        const fireParticles = new THREE.Points(fireGeo, fireMat);
+        burnerGroup.add(fireParticles);
+        scene.add(burnerGroup);
+
+        // --- ANIMATIONS & HELPERS ---
+        const animations = [];
+        const easeOutQuad = t => t * (2 - t);
+        const easeInOutQuad = t => t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        const easeOutElastic = t => {
+            const c4 = (2 * Math.PI) / 3;
+            return t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+        };
+
+        function animateTween(obj, prop, target, duration, easing = easeInOutQuad, onComplete = null) {
+            const startVal = obj[prop];
+            const startTime = performance.now();
+            animations.push({
+                update: (time) => {
+                    const elapsed = time - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    obj[prop] = startVal + (target - startVal) * easing(progress);
+                    if (progress >= 1) {
+                        if (onComplete) onComplete();
+                        return true; 
+                    }
+                    return false; 
+                }
             });
+        }
 
-            if (currentStyle !== 'spaceFilling') {
-                data.bonds.forEach(bond => {
-                    const p1 = new THREE.Vector3(data.atoms[bond.from].x, data.atoms[bond.from].y, data.atoms[bond.from].z);
-                    const p2 = new THREE.Vector3(data.atoms[bond.to].x, data.atoms[bond.to].y, data.atoms[bond.to].z);
+        function showResult(text, colorClass) {
+            const overlay = document.getElementById('result-overlay');
+            const resultText = document.getElementById('result-text');
+            resultText.className = `text-xs md:text-sm font-bold tracking-wide ${colorClass}`;
+            resultText.innerText = text;
+            overlay.style.opacity = '1';
+        }
 
-                    const distance = p1.distanceTo(p2);
-                    const cylinderGeo = new THREE.CylinderGeometry(0.1, 0.1, distance, 16);
-                    const cylinderMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.5 });
+        function hideResult() {
+            document.getElementById('result-overlay').style.opacity = '0';
+        }
 
-                    if (bond.double) {
-                        const perp = new THREE.Vector3(0, 0, 0.12);
-                        const mesh1 = new THREE.Mesh(cylinderGeo, cylinderMat);
-                        const mesh2 = new THREE.Mesh(cylinderGeo, cylinderMat);
+        function uiSelectMat(mat) {
+            if (isSimulating) return;
+            currentMat = mat;
+            ['metal', 'ceramic', 'polymer'].forEach(m => document.getElementById(`btn-mat-${m}`).classList.remove(`btn-active-${m}`));
+            document.getElementById(`btn-mat-${mat}`).classList.add(`btn-active-${mat}`);
+            resetStage();
+            hideResult();
+        }
 
-                        positionCylinder(mesh1, p1, p2, perp);
-                        positionCylinder(mesh2, p1, p2, perp.clone().negate());
+        function uiSelectTest(test) {
+            if (isSimulating) return;
+            currentTest = test;
+            ['elec', 'hammer', 'heat'].forEach(t => document.getElementById(`btn-test-${t}`).classList.remove(`btn-active-${t}`));
+            document.getElementById(`btn-test-${test}`).classList.add(`btn-active-${test}`);
+            resetStage();
+            hideResult();
+        }
 
-                        moleculeGroup.add(mesh1);
-                        moleculeGroup.add(mesh2);
-                    } else {
-                        const mesh = new THREE.Mesh(cylinderGeo, cylinderMat);
-                        positionCylinder(mesh, p1, p2, new THREE.Vector3(0, 0, 0));
-                        moleculeGroup.add(mesh);
+        function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+        function resetStage() {
+            electrodeGroup.position.y = 8;
+            leftEl.position.x = -3;
+            rightEl.position.x = 3;
+            arcMaterial.opacity = 0;
+            arcLight.intensity = 0;
+            
+            hammerGroup.visible = false;
+            hammerGroup.rotation.z = -Math.PI / 4;
+
+            burnerGroup.visible = false;
+            fireLight.intensity = 0;
+
+            loadMaterial(currentMat);
+        }
+
+        // --- SIMULATION EXECUTION ---
+        async function executeSimulation() {
+            if (isSimulating) return;
+            isSimulating = true;
+            document.getElementById('btn-execute').disabled = true;
+            hideResult();
+            resetStage();
+            
+            let targetY = 1.85;
+            let targetRadius = 1.0; 
+            if(currentMat === 'ceramic') { targetY = 2.0; targetRadius = 0.85; }
+            if(currentMat === 'polymer') { targetY = 1.0; targetRadius = 1.3; }
+
+            animateTween(camera.position, 'x', window.innerWidth < 768 ? 0 : 2, 1000);
+            animateTween(camera.position, 'y', window.innerWidth < 768 ? 6 : 5, 1000);
+            animateTween(camera.position, 'z', window.innerWidth < 768 ? 16 : 12, 1000);
+            controls.target.set(0, 1.5, 0);
+
+            await sleep(800);
+
+            if (currentTest === 'elec') {
+                animateTween(electrodeGroup.position, 'y', targetY + 1.5, 800, easeOutQuad);
+                await sleep(900);
+                
+                animateTween(leftEl.position, 'x', -targetRadius, 400, easeOutQuad);
+                animateTween(rightEl.position, 'x', targetRadius, 400, easeOutQuad);
+                await sleep(500);
+                
+                if (currentMat === 'metal') {
+                    arcMaterial.opacity = 1;
+                    animations.push({
+                        start: performance.now(),
+                        update: function(time) {
+                            if(!isSimulating) return true;
+                            arcLight.intensity = 5 + Math.random() * 10;
+                            currentObject.material.emissive.setHex(0x0044aa);
+                            currentObject.material.emissiveIntensity = 0.5 + Math.random()*0.5;
+
+                            arcLines.forEach(line => {
+                                const positions = line.geometry.attributes.position.array;
+                                positions[0] = -targetRadius; positions[1] = -1.5; positions[2] = 0;
+                                positions[12] = targetRadius; positions[13] = -1.5; positions[14] = 0;
+                                const stepX = (targetRadius * 2) / 4; 
+                                for(let j=1; j<=3; j++) {
+                                    positions[j*3] = -targetRadius + (stepX * j) + (Math.random()-0.5)*0.6;
+                                    positions[j*3+1] = -1.5 + (Math.random()-0.5)*0.8;
+                                    positions[j*3+2] = (Math.random()-0.5)*0.8;
+                                }
+                                line.geometry.attributes.position.needsUpdate = true;
+                            });
+                            return false;
+                        }
+                    });
+
+                    await sleep(2000);
+                    showResult("นำไฟฟ้าได้ดี (Excellent Conductor)", "text-green-400");
+                } else {
+                    arcMaterial.opacity = 0.3; arcLight.intensity = 2;
+                    await sleep(150);
+                    arcMaterial.opacity = 0; arcLight.intensity = 0;
+                    showResult("เป็นฉนวนไฟฟ้า (Insulator)", "text-orange-400");
+                }
+            } 
+            else if (currentTest === 'hammer') {
+                let hitY = targetY;
+                if(currentMat === 'metal') hitY = originalY + 2.5 * 0.7;
+                if(currentMat === 'ceramic') hitY = 2.0;
+                if(currentMat === 'polymer') hitY = originalY + 0.4;
+
+                hammerGroup.position.set(4.0 + targetRadius, hitY, 0); 
+                hammerGroup.visible = true;
+                hammerGroup.rotation.z = -Math.PI / 6;
+                
+                animateTween(hammerGroup.rotation, 'z', -Math.PI / 4, 600, easeOutQuad);
+                await sleep(700);
+                
+                animateTween(hammerGroup.rotation, 'z', Math.PI / 2, 200, (t) => t * t);
+                await sleep(200);
+                
+                const origCam = camera.position.clone();
+                animations.push({
+                    start: performance.now(),
+                    update: function(t) {
+                        const elapsed = performance.now() - this.start;
+                        if(elapsed > 200) { camera.position.copy(origCam); return true; }
+                        const intensity = (200 - elapsed) / 200 * 0.5;
+                        camera.position.x = origCam.x + (Math.random() - 0.5) * intensity;
+                        camera.position.y = origCam.y + (Math.random() - 0.5) * intensity;
+                        return false;
+                    }
+                });
+
+                if (currentMat === 'metal') {
+                    animateTween(currentObject.scale, 'y', 0.7, 100);
+                    animateTween(currentObject.scale, 'x', 1.2, 100);
+                    animateTween(currentObject.scale, 'z', 1.2, 100);
+                    animateTween(currentObject.position, 'y', originalY - 0.4, 100);
+                    animateTween(hammerGroup.rotation, 'z', Math.PI / 2.2, 300, easeOutQuad);
+                    showResult("มีความเหนียวสูง ไม่แตกหัก (Tough & Malleable)", "text-green-400");
+                } 
+                else if (currentMat === 'ceramic') {
+                    currentObject.visible = false;
+                    shatterGroup = new THREE.Group();
+                    shatterShards = [];
+                    const shardGeo = new THREE.DodecahedronGeometry(0.3, 0);
+                    const shardMat = currentObject.material.clone();
+                    
+                    for(let i=0; i<40; i++) {
+                        const shard = new THREE.Mesh(shardGeo, shardMat);
+                        shard.position.copy(currentObject.position);
+                        shard.position.y += Math.random() * 2.5 - 1;
+                        shard.position.x += (Math.random() - 0.5) * 1.5;
+                        shard.position.z += (Math.random() - 0.5) * 1.5;
+                        const scale = Math.random() * 0.8 + 0.2;
+                        shard.scale.set(scale, scale, scale);
+                        shard.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, 0);
+                        shard.castShadow = true;
+                        shatterGroup.add(shard);
+                        
+                        shatterShards.push({
+                            mesh: shard,
+                            velY: Math.random() * 8 + 2,
+                            velX: shard.position.x * (Math.random() * 5 + 2),
+                            velZ: shard.position.z * (Math.random() * 5 + 2),
+                            rotX: (Math.random() - 0.5) * 10,
+                            rotY: (Math.random() - 0.5) * 10
+                        });
+                    }
+                    scene.add(shatterGroup);
+                    animateTween(hammerGroup.rotation, 'z', Math.PI / 1.5, 300, easeOutQuad);
+                    showResult("มีความเปราะสูง แตกหักง่าย (Brittle)", "text-red-400");
+                }
+                else if (currentMat === 'polymer') {
+                    animateTween(currentObject.scale, 'y', 0.4, 100);
+                    animateTween(currentObject.scale, 'x', 1.3, 100);
+                    animateTween(currentObject.scale, 'z', 1.3, 100);
+                    animateTween(currentObject.position, 'y', originalY - 0.3, 100, easeInOutQuad, () => {
+                        animateTween(currentObject.scale, 'y', 1, 600, easeOutElastic);
+                        animateTween(currentObject.scale, 'x', 1, 600, easeOutElastic);
+                        animateTween(currentObject.scale, 'z', 1, 600, easeOutElastic);
+                        animateTween(currentObject.position, 'y', originalY, 600, easeOutElastic);
+                    });
+                    animateTween(hammerGroup.rotation, 'z', 0, 400, easeOutQuad);
+                    showResult("มีความยืดหยุ่นสูง (Elastic & Tough)", "text-cyan-400");
+                }
+            }
+            else if (currentTest === 'heat') {
+                burnerGroup.visible = true;
+                animateTween(fireLight, 'intensity', 3, 1000);
+                await sleep(1500);
+
+                if (currentMat === 'metal' || currentMat === 'ceramic') {
+                    const targetColor = currentMat === 'metal' ? 0xff4400 : 0xff7700;
+                    animations.push({
+                        start: performance.now(),
+                        update: function(time) {
+                            const elapsed = time - this.start;
+                            const t = Math.min(elapsed / 3000, 1);
+                            currentObject.material.emissive.setHex(targetColor);
+                            currentObject.material.emissiveIntensity = t * 1.5;
+                            return t >= 1;
+                        }
+                    });
+                    await sleep(3000);
+                    showResult("ทนความร้อนสูง (High Thermal Resistance)", "text-green-400");
+                } 
+                else if (currentMat === 'polymer') {
+                    const meltDuration = 3500;
+                    animateTween(currentObject.scale, 'y', 0.05, meltDuration, easeInOutQuad);
+                    animateTween(currentObject.scale, 'x', 2.5, meltDuration, easeInOutQuad);
+                    animateTween(currentObject.scale, 'z', 2.5, meltDuration, easeInOutQuad);
+                    animateTween(currentObject.position, 'y', 0.6, meltDuration, easeInOutQuad);
+                    await sleep(3500);
+                    showResult("ไม่ทนความร้อน หลอมเหลวได้ง่าย (Low Thermal Resistance)", "text-red-500");
+                }
+            }
+
+            await sleep(2500);
+            isSimulating = false;
+            document.getElementById('btn-execute').disabled = false;
+        }
+
+        // --- RENDER LOOP ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            const time = performance.now();
+
+            for (let i = animations.length - 1; i >= 0; i--) {
+                if (animations[i].update(time)) {
+                    animations.splice(i, 1);
+                }
+            }
+
+            if(burnerGroup.visible) {
+                const positions = fireParticles.geometry.attributes.position.array;
+                for(let i=0; i<fireParticleCount; i++) {
+                    positions[i*3] += fireVel[i].x;
+                    positions[i*3+1] += fireVel[i].y; 
+                    positions[i*3+2] += fireVel[i].z;
+                    if(positions[i*3+1] > 3) {
+                        positions[i*3] = (Math.random() - 0.5) * 2.0;
+                        positions[i*3+1] = 0;
+                        positions[i*3+2] = (Math.random() - 0.5) * 2.0;
+                    }
+                }
+                fireParticles.geometry.attributes.position.needsUpdate = true;
+            }
+
+            if(shatterGroup) {
+                const gravity = -20.0;
+                const floorLevel = 0.6;
+                shatterShards.forEach(s => {
+                    if(s.mesh.position.y > floorLevel || s.velY > 0) {
+                        s.velY += gravity * delta;
+                        s.mesh.position.x += s.velX * delta;
+                        s.mesh.position.y += s.velY * delta;
+                        s.mesh.position.z += s.velZ * delta;
+                        s.mesh.rotation.x += s.rotX * delta;
+                        s.mesh.rotation.y += s.rotY * delta;
+
+                        if(s.mesh.position.y <= floorLevel) {
+                            s.mesh.position.y = floorLevel;
+                            s.velY *= -0.3;
+                            s.velX *= 0.8;
+                            s.velZ *= 0.8;
+                            s.rotX *= 0.5;
+                            s.rotY *= 0.5;
+                            if(Math.abs(s.velY) < 0.5) {
+                                s.velY = 0; s.velX = 0; s.velZ = 0; s.rotX = 0; s.rotY = 0;
+                            }
+                        }
                     }
                 });
             }
 
-            scene.add(moleculeGroup);
-        }
-
-        function triggerPolymerization() {
-            if (moleculeGroup) scene.remove(moleculeGroup);
-
-            moleculeGroup = new THREE.Group();
-            isPolymerView = true;
-            
-            const repeatUnits = 8;
-            const spacingOffset = 1.2;
-            const startX = -((repeatUnits - 1) * spacingOffset) / 2;
-
-            if (currentMonomerKey === 'hdpe' || currentMonomerKey === 'ldpe' || currentMonomerKey === 'pvc') {
-                for (let i = 0; i < repeatUnits; i++) {
-                    const cx = startX + (i * spacingOffset);
-                    const unitGroup = new THREE.Group();
-
-                    const cGeo = new THREE.SphereGeometry(currentStyle === 'spaceFilling' ? 0.84 : 0.6, 24, 24);
-                    const cMat = currentStyle === 'wireframe' 
-                        ? new THREE.MeshBasicMaterial({ color: 0x1e293b, wireframe: true })
-                        : new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.2 });
-                    const cMesh = new THREE.Mesh(cGeo, cMat);
-                    cMesh.position.set(cx, 0, 0);
-                    unitGroup.add(cMesh);
-
-                    const hTopGeo = new THREE.SphereGeometry(currentStyle === 'spaceFilling' ? 0.49 : 0.35, 24, 24);
-                    const hMat = currentStyle === 'wireframe' 
-                        ? new THREE.MeshBasicMaterial({ color: 0x10b981, wireframe: true })
-                        : new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.3, metalness: 0.2 });
-                    
-                    const hTop = new THREE.Mesh(hTopGeo, hMat);
-                    hTop.position.set(cx, 1.1, 0);
-                    unitGroup.add(hTop);
-
-                    if (currentMonomerKey === 'pvc' && i % 2 === 1) {
-                        const clMat = currentStyle === 'wireframe' 
-                            ? new THREE.MeshBasicMaterial({ color: 0x22c55e, wireframe: true })
-                            : new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.3, metalness: 0.2 });
-                        const clBot = new THREE.Mesh(new THREE.SphereGeometry(currentStyle === 'spaceFilling' ? 0.98 : 0.7, 24, 24), clMat);
-                        clBot.position.set(cx, -1.3, 0);
-                        unitGroup.add(clBot);
-                    } else {
-                        const hBot = new THREE.Mesh(hTopGeo, hMat);
-                        hBot.position.set(cx, -1.1, 0);
-                        unitGroup.add(hBot);
-                    }
-
-                    if (currentStyle !== 'spaceFilling') {
-                        const bondMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.5 });
-                        const bTop = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.1, 12), bondMat);
-                        bTop.position.set(cx, 0.55, 0);
-                        unitGroup.add(bTop);
-
-                        const bBot = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.1, 12), bondMat);
-                        bBot.position.set(cx, -0.55, 0);
-                        unitGroup.add(bBot);
-
-                        if (i < repeatUnits - 1) {
-                            const hBond = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, spacingOffset, 12), bondMat);
-                            hBond.position.set(cx + spacingOffset / 2, 0, 0);
-                            hBond.rotation.z = Math.PI / 2;
-                            unitGroup.add(hBond);
-                        }
-                    }
-
-                    moleculeGroup.add(unitGroup);
-                }
-            } else if (currentMonomerKey === 'pp') {
-                for (let i = 0; i < repeatUnits; i++) {
-                    const cx = startX + (i * spacingOffset);
-                    const isUp = (i % 2 === 0);
-                    const unitGroup = new THREE.Group();
-
-                    const cGeo = new THREE.SphereGeometry(currentStyle === 'spaceFilling' ? 0.84 : 0.6, 24, 24);
-                    const cMat = currentStyle === 'wireframe' 
-                        ? new THREE.MeshBasicMaterial({ color: 0x1e293b, wireframe: true })
-                        : new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.2 });
-
-                    const backboneC = new THREE.Mesh(cGeo, cMat);
-                    backboneC.position.set(cx, 0, 0);
-                    unitGroup.add(backboneC);
-
-                    const methylC = new THREE.Mesh(cGeo, cMat);
-                    const methylY = isUp ? 1.3 : -1.3;
-                    methylC.position.set(cx, methylY, 0);
-                    unitGroup.add(methylC);
-
-                    const hGeo = new THREE.SphereGeometry(currentStyle === 'spaceFilling' ? 0.49 : 0.35, 24, 24);
-                    const hMat = currentStyle === 'wireframe' 
-                        ? new THREE.MeshBasicMaterial({ color: 0x10b981, wireframe: true })
-                        : new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.3, metalness: 0.2 });
-
-                    const hBackbone = new THREE.Mesh(hGeo, hMat);
-                    hBackbone.position.set(cx, isUp ? -1.1 : 1.1, 0);
-                    unitGroup.add(hBackbone);
-
-                    const hm1 = new THREE.Mesh(hGeo, hMat);
-                    hm1.position.set(cx, isUp ? 2.3 : -2.3, 0.45);
-                    unitGroup.add(hm1);
-
-                    const hm2 = new THREE.Mesh(hGeo, hMat);
-                    hm2.position.set(cx, isUp ? 2.3 : -2.3, -0.45);
-                    unitGroup.add(hm2);
-
-                    const hm3 = new THREE.Mesh(hGeo, hMat);
-                    hm3.position.set(cx + 0.5, isUp ? 1.8 : -1.8, 0);
-                    unitGroup.add(hm3);
-
-                    if (currentStyle !== 'spaceFilling') {
-                        const bondMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.5 });
-                        const bondGeoVert = new THREE.CylinderGeometry(0.1, 0.1, 1.1, 12);
-                        
-                        const bHb = new THREE.Mesh(bondGeoVert, bondMat);
-                        bHb.position.set(cx, isUp ? -0.55 : 0.55, 0);
-                        unitGroup.add(bHb);
-
-                        const bMethyl = new THREE.Mesh(bondGeoVert, bondMat);
-                        bMethyl.position.set(cx, isUp ? 0.65 : -0.65, 0);
-                        unitGroup.add(bMethyl);
-
-                        const bMh1 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.0, 12), bondMat);
-                        bMh1.position.set(cx, isUp ? 1.8 : -1.8, 0.225);
-                        unitGroup.add(bMh1);
-
-                        const bMh2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.0, 12), bondMat);
-                        bMh2.position.set(cx, isUp ? 1.8 : -1.8, -0.225);
-                        unitGroup.add(bMh2);
-
-                        const bMh3 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.0, 12), bondMat);
-                        bMh3.position.set(cx + 0.25, isUp ? 1.55 : -1.55, 0);
-                        unitGroup.add(bMh3);
-
-                        if (i < repeatUnits - 1) {
-                            const bNext = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, spacingOffset, 12), bondMat);
-                            bNext.position.set(cx + spacingOffset / 2, 0, 0);
-                            bNext.rotation.z = Math.PI / 2;
-                            unitGroup.add(bNext);
-                        }
-                    }
-
-                    moleculeGroup.add(unitGroup);
-                }
-            } else {
-                for (let i = 0; i < repeatUnits; i++) {
-                    const cx = startX + (i * (spacingOffset * 1.5));
-                    const monomerData = monomersData[currentMonomerKey];
-                    const unitGroup = new THREE.Group();
-
-                    monomerData.atoms.forEach((atom) => {
-                        let radius = atom.size;
-                        if (currentStyle === 'spaceFilling') radius *= 1.4;
-                        if (currentStyle === 'wireframe') radius *= 0.6;
-
-                        const geometry = new THREE.SphereGeometry(radius, 24, 24);
-                        const material = currentStyle === 'wireframe' 
-                            ? new THREE.MeshBasicMaterial({ color: atom.color, wireframe: true })
-                            : new THREE.MeshStandardMaterial({ color: atom.color, roughness: 0.3, metalness: 0.2 });
-
-                        const mesh = new THREE.Mesh(geometry, material);
-                        mesh.position.set(cx + atom.x, atom.y, atom.z);
-                        unitGroup.add(mesh);
-                    });
-
-                    moleculeGroup.add(unitGroup);
-                }
-            }
-
-            scene.add(moleculeGroup);
-            showToast('สร้างโซ่โพลิเมอร์', `จำลองโมเลกุล ${repeatUnits} หน่วยซ้ำของ ${monomersData[currentMonomerKey].polymerName}`);
-        }
-
-        function showStructure3D(type) {
-            if (moleculeGroup) scene.remove(moleculeGroup);
-            moleculeGroup = new THREE.Group();
-            isPolymerView = true;
-
-            const cMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.2 });
-            const hMat = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.3, metalness: 0.2 });
-            const crossMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.3, metalness: 0.2 });
-            const bondMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.5 });
-
-            if (type === 'linear') {
-                document.getElementById('currentMonomerTitle').innerText = 'โครงสร้างโพลิเมอร์แบบเส้น (Linear Polymer)';
-                document.getElementById('plasticDescText').innerText = 'สายโซ่ยาวเรียงต่อกัน ยืดหยุ่นและหลอมเหลวได้ง่ายเมื่อได้รับความร้อน (เช่น HDPE, LDPE, PVC)';
-                
-                for (let i = 0; i < 10; i++) {
-                    const cx = -5 + (i * 1.1);
-                    const cMesh = new THREE.Mesh(new THREE.SphereGeometry(0.55, 24, 24), cMat);
-                    cMesh.position.set(cx, 0, 0);
-                    moleculeGroup.add(cMesh);
-
-                    const hUp = new THREE.Mesh(new THREE.SphereGeometry(0.32, 24, 24), hMat);
-                    hUp.position.set(cx, 1.0, 0);
-                    moleculeGroup.add(hUp);
-
-                    const hBot = new THREE.Mesh(new THREE.SphereGeometry(0.32, 24, 24), hMat);
-                    hBot.position.set(cx, -1.0, 0);
-                    moleculeGroup.add(hBot);
-
-                    const b1 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.0, 12), bondMat);
-                    b1.position.set(cx, 0.5, 0);
-                    moleculeGroup.add(b1);
-
-                    const b2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.0, 12), bondMat);
-                    b2.position.set(cx, -0.5, 0);
-                    moleculeGroup.add(b2);
-
-                    if (i < 9) {
-                        const bNext = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.1, 12), bondMat);
-                        bNext.position.set(cx + 0.55, 0, 0);
-                        bNext.rotation.z = Math.PI / 2;
-                        moleculeGroup.add(bNext);
-                    }
-                }
-                showToast('แสดงโครงสร้าง 3D', 'โครงสร้างโพลิเมอร์แบบเส้น (Linear Polymer)');
-            } else if (type === 'branched') {
-                document.getElementById('currentMonomerTitle').innerText = 'โครงสร้างโพลิเมอร์แบบกิ่ง (Branched Polymer - 3 กิ่งสลับบนล่าง)';
-                document.getElementById('plasticDescText').innerText = 'มีสายโซ่ย่อยแตกแขนงออกไป 3 กิ่ง (สลับบน ล่าง บน) ความหนาแน่นต่ำ จุดหลอมเหลวต่ำกว่าแบบเส้น (เช่น LDPE)';
-
-                for (let i = 0; i < 10; i++) {
-                    const cx = -5 + (i * 1.1);
-                    const cMesh = new THREE.Mesh(new THREE.SphereGeometry(0.55, 24, 24), cMat);
-                    cMesh.position.set(cx, 0, 0);
-                    moleculeGroup.add(cMesh);
-
-                    if (i === 2 || i === 8) {
-                        const branchC1 = new THREE.Mesh(new THREE.SphereGeometry(0.55, 24, 24), crossMat);
-                        branchC1.position.set(cx, 1.1, 0);
-                        moleculeGroup.add(branchC1);
-
-                        const branchC2 = new THREE.Mesh(new THREE.SphereGeometry(0.55, 24, 24), crossMat);
-                        branchC2.position.set(cx, 2.2, 0);
-                        moleculeGroup.add(branchC2);
-
-                        const bBr1 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.1, 12), bondMat);
-                        bBr1.position.set(cx, 0.55, 0);
-                        moleculeGroup.add(bBr1);
-
-                        const bBr2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.1, 12), bondMat);
-                        bBr2.position.set(cx, 1.65, 0);
-                        moleculeGroup.add(bBr2);
-
-                        const hBot = new THREE.Mesh(new THREE.SphereGeometry(0.32, 24, 24), hMat);
-                        hBot.position.set(cx, -1.0, 0);
-                        moleculeGroup.add(hBot);
-                        const b2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.0, 12), bondMat);
-                        b2.position.set(cx, -0.5, 0);
-                        moleculeGroup.add(b2);
-
-                    } else if (i === 5) {
-                        const branchC1 = new THREE.Mesh(new THREE.SphereGeometry(0.55, 24, 24), crossMat);
-                        branchC1.position.set(cx, -1.1, 0);
-                        moleculeGroup.add(branchC1);
-
-                        const branchC2 = new THREE.Mesh(new THREE.SphereGeometry(0.55, 24, 24), crossMat);
-                        branchC2.position.set(cx, -2.2, 0);
-                        moleculeGroup.add(branchC2);
-
-                        const bBr1 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.1, 12), bondMat);
-                        bBr1.position.set(cx, -0.55, 0);
-                        moleculeGroup.add(bBr1);
-
-                        const bBr2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.1, 12), bondMat);
-                        bBr2.position.set(cx, -1.65, 0);
-                        moleculeGroup.add(bBr2);
-
-                        const hUp = new THREE.Mesh(new THREE.SphereGeometry(0.32, 24, 24), hMat);
-                        hUp.position.set(cx, 1.0, 0);
-                        moleculeGroup.add(hUp);
-                        const b1 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.0, 12), bondMat);
-                        b1.position.set(cx, 0.5, 0);
-                        moleculeGroup.add(b1);
-
-                    } else {
-                        const hUp = new THREE.Mesh(new THREE.SphereGeometry(0.32, 24, 24), hMat);
-                        hUp.position.set(cx, 1.0, 0);
-                        moleculeGroup.add(hUp);
-                        const b1 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.0, 12), bondMat);
-                        b1.position.set(cx, 0.5, 0);
-                        moleculeGroup.add(b1);
-
-                        const hBot = new THREE.Mesh(new THREE.SphereGeometry(0.32, 24, 24), hMat);
-                        hBot.position.set(cx, -1.0, 0);
-                        moleculeGroup.add(hBot);
-                        const b2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.0, 12), bondMat);
-                        b2.position.set(cx, -0.5, 0);
-                        moleculeGroup.add(b2);
-                    }
-
-                    if (i < 9) {
-                        const bNext = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.1, 12), bondMat);
-                        bNext.position.set(cx + 0.55, 0, 0);
-                        bNext.rotation.z = Math.PI / 2;
-                        moleculeGroup.add(bNext);
-                    }
-                }
-                showToast('แสดงโครงสร้าง 3D', 'โครงสร้างโพลิเมอร์แบบกิ่ง (Branched Polymer - 3 กิ่งสลับบนล่าง)');
-            } else if (type === 'network') {
-                document.getElementById('currentMonomerTitle').innerText = 'โครงสร้างโพลิเมอร์แบบร่างแห (Cross-linked Polymer)';
-                document.getElementById('plasticDescText').innerText = 'สายโซ่เชื่อมกันเป็นโครงข่าย แข็งแรงมาก ไม่หลอมเหลวเมื่อโดนความร้อน (เช่น เบกกาไลต์, ยางวัลคาไนซ์)';
-
-                for (let row = -1; row <= 1; row++) {
-                    for (let col = -3; col <= 3; col++) {
-                        const cx = col * 1.4;
-                        const cy = row * 1.4;
-                        const cMesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 24, 24), row === 0 ? cMat : crossMat);
-                        cMesh.position.set(cx, cy, 0);
-                        moleculeGroup.add(cMesh);
-
-                        if (col < 3) {
-                            const bH = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.4, 12), bondMat);
-                            bH.position.set(cx + 0.7, cy, 0);
-                            bH.rotation.z = Math.PI / 2;
-                            moleculeGroup.add(bH);
-                        }
-                        if (row < 1) {
-                            const bV = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.4, 12), bondMat);
-                            bV.position.set(cx, cy + 0.7, 0);
-                            moleculeGroup.add(bV);
-                        }
-                    }
-                }
-                showToast('แสดงโครงสร้าง 3D', 'โครงสร้างโพลิเมอร์แบบร่างแห (Cross-linked Polymer)');
-            }
-
-            scene.add(moleculeGroup);
-            closeTableModal();
-        }
-
-        function positionCylinder(mesh, p1, p2, offset) {
-            const midpoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5).add(offset);
-            mesh.position.copy(midpoint);
-            mesh.lookAt(p2.clone().add(offset));
-            mesh.rotateX(Math.PI / 2);
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-
-            if (isRotating && moleculeGroup) {
-                moleculeGroup.rotation.y += 0.008 * animSpeedMultiplier;
-                moleculeGroup.rotation.x += 0.003 * animSpeedMultiplier;
-            }
-
+            controls.update();
             renderer.render(scene, camera);
         }
 
-        function onWindowResize() {
-            const container = document.getElementById('canvas-container');
-            if (!container) return;
-            camera.aspect = container.clientWidth / container.clientHeight;
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.position.z = window.innerWidth < 768 ? 22 : 16;
             camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
-        }
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
 
-        function switchMonomer(key) {
-            currentMonomerKey = key;
-            const data = monomersData[key];
-
-            document.querySelectorAll('.monomer-btn').forEach(btn => {
-                btn.className = 'monomer-btn p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-left transition-all hover:border-slate-700 group flex items-center justify-between';
-            });
-            const activeBtn = document.getElementById(`btn-${key}`);
-            if (activeBtn) {
-                activeBtn.className = 'monomer-btn p-3.5 rounded-xl bg-cyan-500/20 border border-cyan-500/50 text-left transition-all hover:border-cyan-400 group flex items-center justify-between';
-            }
-
-            document.getElementById('currentMonomerTitle').innerText = data.title;
-            document.getElementById('polyBtn').innerHTML = `<i class="fa-solid fa-link"></i> ${data.buttonText}`;
-            document.getElementById('plasticDescText').innerText = data.desc;
-            buildMolecules3D(key);
-            showToast('สลับประเภทพลาสติก', `เปลี่ยนการแสดงผลเป็น ${data.title} เรียบร้อยแล้ว`);
-        }
-
-        function toggleRotation() {
-            isRotating = !isRotating;
-            const btn = document.getElementById('pauseRotBtn');
-            if (isRotating) {
-                btn.innerHTML = '<i class="fa-solid fa-pause mr-1"></i> หยุดหมุน';
-                btn.className = 'px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-medium hover:bg-cyan-500/30 transition-all';
-            } else {
-                btn.innerHTML = '<i class="fa-solid fa-play mr-1"></i> เล่นต่อ';
-                btn.className = 'px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-medium hover:bg-amber-500/30 transition-all';
-            }
-        }
-
-        function setAnimSpeed(speed) {
-            animSpeedMultiplier = speed;
-        }
-
-        function changeRenderStyle(style) {
-            currentStyle = style;
-            if (isPolymerView) {
-                triggerPolymerization();
-            } else {
-                buildMolecules3D(currentMonomerKey);
-            }
-        }
-
-        function resetCamera() {
-            if (moleculeGroup) moleculeGroup.rotation.set(0, 0, 0);
-            camera.position.set(0, 0, 8);
-            showToast('รีเซ็ตมุมมอง', 'ปรับตำแหน่งกล้องและองศาโมเลกุลกลับสู่ค่าเริ่มต้น');
-        }
-
-        function openTableModal() {
-            document.getElementById('tableModal').classList.remove('hidden');
-        }
-
-        function closeTableModal() {
-            document.getElementById('tableModal').classList.add('hidden');
-        }
-
-        function showToast(title, message) {
-            const toast = document.getElementById('toastNotification');
-            document.getElementById('toastTitle').innerText = title;
-            document.getElementById('toastMessage').innerText = message;
-
-            toast.classList.remove('translate-y-20', 'opacity-0');
-            toast.classList.add('translate-y-0', 'opacity-100');
-
-            setTimeout(() => {
-                toast.classList.remove('translate-y-0', 'opacity-100');
-                toast.classList.add('translate-y-20', 'opacity-0');
-            }, 3000);
-        }
-
-        window.onload = function() {
-            init3D();
-        };
+        resetStage();
+        animate();
     </script>
 </body>
 </html>
