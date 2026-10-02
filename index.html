@@ -62,13 +62,8 @@
         .panel-transition {
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
         }
-        .collapsed-left {
-            transform: translateX(calc(-100% - 1rem));
-            opacity: 0;
-            pointer-events: none;
-        }
-        .collapsed-right {
-            transform: translateX(calc(100% + 1rem));
+        .collapsed-top {
+            transform: translateY(calc(-100% - 1rem));
             opacity: 0;
             pointer-events: none;
         }
@@ -79,93 +74,97 @@
     <div id="canvas-container"></div>
 
     <!-- UI Overlay Layer -->
-    <div class="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-4 md:p-6 overflow-hidden">
+    <div class="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-3 md:p-5 overflow-hidden">
         
-        <!-- Top Bar: Logo & Execute -->
-        <div class="flex justify-between items-center w-full max-w-7xl mx-auto pointer-events-auto">
+        <!-- Top Bar: Logo, Panels & Execute -->
+        <div class="flex flex-col md:flex-row justify-between items-center w-full max-w-7xl mx-auto pointer-events-auto gap-3">
+            
             <!-- Logo -->
-            <div class="glass-panel rounded-xl px-4 py-2 flex items-center gap-2">
-                <svg class="w-6 h-6 md:w-7 md:h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+            <div class="glass-panel rounded-xl px-3 py-1.5 flex items-center gap-2">
+                <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                 <div>
-                    <h1 class="text-sm md:text-base font-bold tracking-wider text-white m-0 leading-none">
+                    <h1 class="text-xs md:text-sm font-bold tracking-wider text-white m-0 leading-none">
                         AI LAB <span class="font-light text-cyan-400">PRO</span>
                     </h1>
-                    <span class="digital-font text-cyan-500 text-[7px] md:text-[8px] tracking-widest block mt-0.5">3D PHYSICS</span>
+                    <span class="digital-font text-cyan-500 text-[6px] tracking-widest block mt-0.5">3D PHYSICS</span>
                 </div>
             </div>
 
-            <!-- Feedback Overlay -->
-            <div id="result-overlay" class="px-6 py-2 rounded-full bg-black/80 border border-white/20 text-center opacity-0 transition-opacity duration-500 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.6)]">
-                <span id="result-text" class="text-xs md:text-sm font-bold text-white tracking-wide">Result</span>
+            <!-- Top Row: Panels Container (Material & Test side-by-side) -->
+            <div class="flex flex-wrap items-center justify-center gap-3">
+                
+                <!-- 1. SELECT MATERIAL PANEL -->
+                <div class="relative flex flex-col items-center">
+                    <div id="panel-material" class="glass-panel panel-transition rounded-xl p-2.5 w-52 md:w-56 flex flex-col gap-2 pointer-events-auto">
+                        <div class="flex items-center justify-between border-b border-slate-700/60 pb-1.5">
+                            <h2 class="text-[9px] md:text-[10px] uppercase tracking-widest text-slate-300 font-bold">1. Select Material</h2>
+                            <span class="digital-font text-[8px] text-cyan-400">วัสดุ</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <button id="btn-mat-metal" onclick="uiSelectMat('metal')" class="control-btn border border-slate-700 bg-slate-800/50 rounded-lg p-1.5 flex flex-col items-center justify-center hover:bg-slate-700 btn-active-metal">
+                                <span class="text-xs">🔩</span>
+                                <span class="font-semibold text-slate-200 text-[9px] mt-0.5">Metal</span>
+                            </button>
+                            <button id="btn-mat-ceramic" onclick="uiSelectMat('ceramic')" class="control-btn border border-slate-700 bg-slate-800/50 rounded-lg p-1.5 flex flex-col items-center justify-center hover:bg-slate-700">
+                                <span class="text-xs">🍽️</span>
+                                <span class="font-semibold text-slate-200 text-[9px] mt-0.5">Ceramic</span>
+                            </button>
+                            <button id="btn-mat-polymer" onclick="uiSelectMat('polymer')" class="control-btn border border-slate-700 bg-slate-800/50 rounded-lg p-1.5 flex flex-col items-center justify-center hover:bg-slate-700">
+                                <span class="text-xs">🥤</span>
+                                <span class="font-semibold text-slate-200 text-[9px] mt-0.5">Polymer</span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Toggle Button Material -->
+                    <button onclick="togglePanel('material')" class="glass-panel pointer-events-auto h-5 px-3 rounded-b-lg flex items-center justify-center text-cyan-400 hover:bg-slate-800 transition-colors shadow-sm mt-[-1px]" title="ย่อ/ขยายแผงวัสดุ">
+                        <svg id="icon-toggle-material" class="w-3 h-3 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+                    </button>
+                </div>
+
+                <!-- 2. SELECT TEST PANEL -->
+                <div class="relative flex flex-col items-center">
+                    <div id="panel-test" class="glass-panel panel-transition rounded-xl p-2.5 w-52 md:w-56 flex flex-col gap-2 pointer-events-auto">
+                        <div class="flex items-center justify-between border-b border-slate-700/60 pb-1.5">
+                            <h2 class="text-[9px] md:text-[10px] uppercase tracking-widest text-slate-300 font-bold">2. Select Test</h2>
+                            <span class="digital-font text-[8px] text-orange-400">การทดสอบ</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <button id="btn-test-elec" onclick="uiSelectTest('elec')" class="control-btn border border-slate-700 bg-slate-800/50 rounded-lg p-1.5 flex flex-col items-center justify-center hover:bg-slate-700 btn-active-elec">
+                                <span class="text-xs">⚡</span>
+                                <span class="font-semibold text-slate-200 text-[9px] mt-0.5">นำไฟฟ้า</span>
+                            </button>
+                            <button id="btn-test-hammer" onclick="uiSelectTest('hammer')" class="control-btn border border-slate-700 bg-slate-800/50 rounded-lg p-1.5 flex flex-col items-center justify-center hover:bg-slate-700">
+                                <span class="text-xs">🔨</span>
+                                <span class="font-semibold text-slate-200 text-[9px] mt-0.5">กระแทก</span>
+                            </button>
+                            <button id="btn-test-heat" onclick="uiSelectTest('heat')" class="control-btn border border-slate-700 bg-slate-800/50 rounded-lg p-1.5 flex flex-col items-center justify-center hover:bg-slate-700">
+                                <span class="text-xs">🔥</span>
+                                <span class="font-semibold text-slate-200 text-[9px] mt-0.5">ความร้อน</span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Toggle Button Test -->
+                    <button onclick="togglePanel('test')" class="glass-panel pointer-events-auto h-5 px-3 rounded-b-lg flex items-center justify-center text-cyan-400 hover:bg-slate-800 transition-colors shadow-sm mt-[-1px]" title="ย่อ/ขยายแผงทดสอบ">
+                        <svg id="icon-toggle-test" class="w-3 h-3 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+                    </button>
+                </div>
+
             </div>
 
             <!-- Execute Button -->
             <div>
-                <button id="btn-execute" onclick="executeSimulation()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-5 py-2.5 rounded-xl shadow-[0_0_15px_rgba(0,243,255,0.4)] transition-all transform hover:scale-[1.05] active:scale-95 digital-font text-xs tracking-widest disabled:opacity-50 disabled:cursor-not-allowed">
+                <button id="btn-execute" onclick="executeSimulation()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-4 py-2 rounded-xl shadow-[0_0_15px_rgba(0,243,255,0.4)] transition-all transform hover:scale-[1.05] active:scale-95 digital-font text-[10px] tracking-widest disabled:opacity-50 disabled:cursor-not-allowed">
                     EXECUTE
                 </button>
             </div>
+
         </div>
 
-        <!-- Middle Area: Left & Right Collapsible Panels -->
-        <div class="flex justify-between items-center w-full max-w-7xl mx-auto my-auto relative">
-            
-            <!-- 1. SELECT MATERIAL PANEL (LEFT) -->
-            <div class="relative flex items-center">
-                <div id="panel-left" class="glass-panel panel-transition rounded-2xl p-3 md:p-4 w-56 md:w-64 flex flex-col gap-2.5 pointer-events-auto">
-                    <div class="flex items-center justify-between border-b border-slate-700/60 pb-2">
-                        <h2 class="text-[10px] md:text-xs uppercase tracking-widest text-slate-300 font-bold">1. Select Material</h2>
-                        <span class="digital-font text-[9px] text-cyan-400">วัสดุ</span>
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <button id="btn-mat-metal" onclick="uiSelectMat('metal')" class="control-btn border border-slate-700 bg-slate-800/50 rounded-xl p-2.5 flex items-center justify-between hover:bg-slate-700 btn-active-metal">
-                            <span class="font-semibold text-slate-200 text-xs md:text-sm">Metal (โลหะ)</span>
-                            <span class="text-xs">🔩</span>
-                        </button>
-                        <button id="btn-mat-ceramic" onclick="uiSelectMat('ceramic')" class="control-btn border border-slate-700 bg-slate-800/50 rounded-xl p-2.5 flex items-center justify-between hover:bg-slate-700">
-                            <span class="font-semibold text-slate-200 text-xs md:text-sm">Ceramic (เซรามิก)</span>
-                            <span class="text-xs">🍽️</span>
-                        </button>
-                        <button id="btn-mat-polymer" onclick="uiSelectMat('polymer')" class="control-btn border border-slate-700 bg-slate-800/50 rounded-xl p-2.5 flex items-center justify-between hover:bg-slate-700">
-                            <span class="font-semibold text-slate-200 text-xs md:text-sm">Polymer (พอลิเมอร์)</span>
-                            <span class="text-xs">🥤</span>
-                        </button>
-                    </div>
-                </div>
-                <!-- Toggle Button Left -->
-                <button onclick="togglePanel('left')" class="glass-panel pointer-events-auto w-7 h-12 rounded-r-xl flex items-center justify-center text-cyan-400 hover:bg-slate-800 transition-colors ml-0.5 shadow-md" title="ย่อ/ขยายแผงวัสดุ">
-                    <svg id="icon-toggle-left" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                </button>
+        <!-- Middle Feedback Overlay -->
+        <div class="flex justify-center items-center my-auto pointer-events-none">
+            <div id="result-overlay" class="px-6 py-2 rounded-full bg-black/80 border border-white/20 text-center opacity-0 transition-opacity duration-500 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.6)] pointer-events-auto">
+                <span id="result-text" class="text-xs md:text-sm font-bold text-white tracking-wide">Result</span>
             </div>
-
-            <!-- 2. SELECT TEST PANEL (RIGHT) -->
-            <div class="relative flex items-center flex-row-reverse">
-                <div id="panel-right" class="glass-panel panel-transition rounded-2xl p-3 md:p-4 w-56 md:w-64 flex flex-col gap-2.5 pointer-events-auto">
-                    <div class="flex items-center justify-between border-b border-slate-700/60 pb-2">
-                        <h2 class="text-[10px] md:text-xs uppercase tracking-widest text-slate-300 font-bold">2. Select Test</h2>
-                        <span class="digital-font text-[9px] text-orange-400">การทดสอบ</span>
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <button id="btn-test-elec" onclick="uiSelectTest('elec')" class="control-btn border border-slate-700 bg-slate-800/50 rounded-xl p-2.5 flex items-center justify-between hover:bg-slate-700 btn-active-elec">
-                            <span class="font-semibold text-slate-200 text-xs md:text-sm">การนำไฟฟ้า (Conductivity)</span>
-                            <span class="text-xs">⚡</span>
-                        </button>
-                        <button id="btn-test-hammer" onclick="uiSelectTest('hammer')" class="control-btn border border-slate-700 bg-slate-800/50 rounded-xl p-2.5 flex items-center justify-between hover:bg-slate-700">
-                            <span class="font-semibold text-slate-200 text-xs md:text-sm">การกระแทก (Impact)</span>
-                            <span class="text-xs">🔨</span>
-                        </button>
-                        <button id="btn-test-heat" onclick="uiSelectTest('heat')" class="control-btn border border-slate-700 bg-slate-800/50 rounded-xl p-2.5 flex items-center justify-between hover:bg-slate-700">
-                            <span class="font-semibold text-slate-200 text-xs md:text-sm">ความร้อน (Thermal)</span>
-                            <span class="text-xs">🔥</span>
-                        </button>
-                    </div>
-                </div>
-                <!-- Toggle Button Right -->
-                <button onclick="togglePanel('right')" class="glass-panel pointer-events-auto w-7 h-12 rounded-l-xl flex items-center justify-center text-cyan-400 hover:bg-slate-800 transition-colors mr-0.5 shadow-md" title="ย่อ/ขยายแผงทดสอบ">
-                    <svg id="icon-toggle-right" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                </button>
-            </div>
-
         </div>
 
         <!-- Bottom Spacer -->
@@ -177,30 +176,30 @@
         let currentMat = 'metal';
         let currentTest = 'elec';
         let isSimulating = false;
-        let isLeftCollapsed = false;
-        let isRightCollapsed = false;
+        let isMaterialCollapsed = false;
+        let isTestCollapsed = false;
 
-        function togglePanel(side) {
-            if (side === 'left') {
-                isLeftCollapsed = !isLeftCollapsed;
-                const panel = document.getElementById('panel-left');
-                const icon = document.getElementById('icon-toggle-left');
-                if (isLeftCollapsed) {
-                    panel.classList.add('collapsed-left');
+        function togglePanel(panelName) {
+            if (panelName === 'material') {
+                isMaterialCollapsed = !isMaterialCollapsed;
+                const panel = document.getElementById('panel-material');
+                const icon = document.getElementById('icon-toggle-material');
+                if (isMaterialCollapsed) {
+                    panel.classList.add('collapsed-top');
                     icon.style.transform = 'rotate(180deg)';
                 } else {
-                    panel.classList.remove('collapsed-left');
+                    panel.classList.remove('collapsed-top');
                     icon.style.transform = 'rotate(0deg)';
                 }
-            } else if (side === 'right') {
-                isRightCollapsed = !isRightCollapsed;
-                const panel = document.getElementById('panel-right');
-                const icon = document.getElementById('icon-toggle-right');
-                if (isRightCollapsed) {
-                    panel.classList.add('collapsed-right');
+            } else if (panelName === 'test') {
+                isTestCollapsed = !isTestCollapsed;
+                const panel = document.getElementById('panel-test');
+                const icon = document.getElementById('icon-toggle-test');
+                if (isTestCollapsed) {
+                    panel.classList.add('collapsed-top');
                     icon.style.transform = 'rotate(180deg)';
                 } else {
-                    panel.classList.remove('collapsed-right');
+                    panel.classList.remove('collapsed-top');
                     icon.style.transform = 'rotate(0deg)';
                 }
             }
